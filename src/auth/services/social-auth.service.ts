@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
+import { SocialConnection } from '@prisma/client';
 import { SocialUserDto } from '../dto/social-user.dto';
 import { TokensDto } from '../dto/tokens.dto';
 import { UserRepository } from '../repositories/user.repository';
@@ -57,11 +58,11 @@ export class SocialAuthService {
       if (user) {
         // User exists, update social connection if needed
         const existingConnection =
-          await this.userRepository.findSocialConnection(
+          (await this.userRepository.findSocialConnection(
             user.id,
             provider,
             providerId,
-          );
+          )) as SocialConnection | null;
 
         if (!existingConnection) {
           // Add new social connection
@@ -75,7 +76,7 @@ export class SocialAuthService {
         // Update user profile with social data if needed
         if (!user.avatarUrl && picture) {
           await this.userRepository.updateUserProfile(user.id, {
-            avatarUrl: picture,
+            avatarUrl: picture || undefined,
             displayName: user.displayName || displayName,
           });
         }
@@ -94,7 +95,7 @@ export class SocialAuthService {
             passwordHash,
             isEmailVerified: true, // Social login users are considered verified
             displayName: displayName || generatedUsername,
-            avatarUrl: picture,
+            avatarUrl: picture || undefined,
           },
           {
             provider,
@@ -120,8 +121,12 @@ export class SocialAuthService {
 
       return tokens;
     } catch (error) {
+      // Handle error with proper type checking
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error occurred';
+
       throw new SocialAuthException(
-        `Failed to process social login: ${error.message}`,
+        `Failed to process social login: ${errorMessage}`,
       );
     }
   }
