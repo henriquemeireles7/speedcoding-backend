@@ -5,6 +5,8 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  Get,
+  Req,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import {
@@ -18,6 +20,8 @@ import {
   ResetPasswordDto,
 } from './dto';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { Request } from 'express';
 
 /**
  * Authentication Controller
@@ -119,5 +123,16 @@ export class AuthController {
     @Body() resetPasswordDto: ResetPasswordDto,
   ): Promise<void> {
     await this.authService.resetPassword(resetPasswordDto);
+  }
+
+  /**
+   * Get authenticated user profile
+   * @returns User profile data
+   */
+  @Get('profile')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async getProfile(@Req() req: Request & { user: { id: string } }) {
+    return await this.authService.getProfile(req.user.id);
   }
 }

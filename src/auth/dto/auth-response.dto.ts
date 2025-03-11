@@ -3,5 +3,5 @@
  * Contains the JWT token for authenticated users
  */
 export class AuthResponseDto {
-  token: string;
+  accessToken: string;
 }

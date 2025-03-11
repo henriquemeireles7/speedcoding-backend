@@ -389,4 +389,29 @@ export class AuthService {
       },
     });
   }
+
+  /**
+   * Get user profile by ID
+   * @param userId User ID
+   * @returns User profile data
+   */
+  async getProfile(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        createdAt: true,
+        updatedAt: true,
+        isEmailVerified: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
+  }
 }

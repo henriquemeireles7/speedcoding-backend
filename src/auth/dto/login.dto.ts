@@ -1,13 +1,13 @@
-import { IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsNotEmpty, IsString, MinLength, IsEmail } from 'class-validator';
 
 /**
  * Data Transfer Object for user login
- * Contains validation rules for username and password
+ * Contains validation rules for email and password
  */
 export class LoginDto {
-  @IsNotEmpty({ message: 'Username is required' })
-  @IsString({ message: 'Username must be a string' })
-  username: string;
+  @IsNotEmpty({ message: 'Email is required' })
+  @IsEmail({}, { message: 'Invalid email format' })
+  email: string;
 
   @IsNotEmpty({ message: 'Password is required' })
   @IsString({ message: 'Password must be a string' })

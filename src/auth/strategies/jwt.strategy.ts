@@ -7,8 +7,9 @@ import { PrismaService } from '../../prisma/prisma.service';
  * JWT payload interface
  */
 interface JwtPayload {
-  sub: number; // User ID
+  sub: string; // User ID (UUID)
   username: string;
+  email: string;
 }
 
 /**
@@ -33,7 +34,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(payload: JwtPayload) {
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, username: true }, // Don't include password hash
+      select: { id: true, username: true, email: true }, // Include email
     });
 
     if (!user) {
