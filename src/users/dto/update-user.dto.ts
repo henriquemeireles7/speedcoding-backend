@@ -1,45 +1,133 @@
-import { IsOptional, IsString, MaxLength, IsObject } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsOptional,
+  IsString,
+  MaxLength,
+  IsUrl,
+  IsObject,
+  IsArray,
+  ValidateNested,
+  ArrayMaxSize,
+  IsEnum,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 
 /**
- * Data Transfer Object for updating a user's profile
+ * Social media platform enum
  */
-export class UpdateUserDto {
-  @ApiProperty({
-    description: 'Display name for the user',
-    example: 'John Doe',
-    required: false,
+export enum SocialMediaPlatform {
+  GITHUB = 'github',
+  TWITTER = 'twitter',
+  LINKEDIN = 'linkedin',
+  INSTAGRAM = 'instagram',
+  FACEBOOK = 'facebook',
+  YOUTUBE = 'youtube',
+  TWITCH = 'twitch',
+  DISCORD = 'discord',
+  OTHER = 'other',
+}
+
+/**
+ * Social media link DTO
+ */
+export class SocialMediaLinkDto {
+  @ApiPropertyOptional({
+    description: 'Social media platform',
+    enum: SocialMediaPlatform,
+  })
+  @IsEnum(SocialMediaPlatform)
+  platform: SocialMediaPlatform;
+
+  @ApiPropertyOptional({
+    description: 'Social media URL',
+    example: 'https://github.com/username',
+  })
+  @IsUrl()
+  url: string;
+
+  @ApiPropertyOptional({
+    description: 'Display text for the link',
+    example: 'My GitHub Profile',
   })
   @IsOptional()
   @IsString()
+  @MaxLength(50)
+  displayText?: string;
+}
+
+/**
+ * Data Transfer Object for updating a user
+ */
+export class UpdateUserDto {
+  @ApiPropertyOptional({
+    description: 'Display name',
+    example: 'John Doe',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
   displayName?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'User biography',
-    example: 'Software developer passionate about coding challenges',
-    required: false,
-    maxLength: 500,
+    example: 'Full-stack developer with 5 years of experience',
   })
   @IsOptional()
   @IsString()
   @MaxLength(500)
   bio?: string;
 
-  @ApiProperty({
-    description: 'URL to user avatar image',
-    example: 'https://example.com/avatars/johndoe.jpg',
-    required: false,
+  @ApiPropertyOptional({
+    description: 'Avatar URL',
+    example: '/uploads/avatars/user-123.jpg',
   })
   @IsOptional()
   @IsString()
   avatarUrl?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'User preferences',
     example: { theme: 'dark', notifications: true },
-    required: false,
   })
   @IsOptional()
   @IsObject()
   preferences?: Record<string, any>;
+
+  @ApiPropertyOptional({
+    description: 'User location',
+    example: 'San Francisco, CA',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  location?: string;
+
+  @ApiPropertyOptional({
+    description: 'User website',
+    example: 'https://johndoe.com',
+  })
+  @IsOptional()
+  @IsUrl()
+  website?: string;
+
+  @ApiPropertyOptional({
+    description: 'Social media links',
+    type: [SocialMediaLinkDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SocialMediaLinkDto)
+  @ArrayMaxSize(10)
+  socialLinks?: SocialMediaLinkDto[];
+
+  @ApiPropertyOptional({
+    description: 'User skills',
+    example: ['JavaScript', 'React', 'Node.js'],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @ArrayMaxSize(20)
+  skills?: string[];
 }

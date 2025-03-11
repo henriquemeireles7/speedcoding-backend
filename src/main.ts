@@ -5,15 +5,15 @@ import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { LoggingService } from './logging/logging.service';
 import { SentryService } from './sentry/sentry.service';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 
 /**
  * Bootstrap the application
  */
 async function bootstrap() {
   // Create the application
-  const app = await NestFactory.create(AppModule, {
-    bufferLogs: true,
-  });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Get configuration service
   const configService = app.get(ConfigService);
@@ -25,7 +25,8 @@ async function bootstrap() {
   app.useLogger(logger);
 
   // Set up global prefix
-  app.setGlobalPrefix('api');
+  const apiPrefix = configService.get<string>('API_PREFIX', 'api');
+  app.setGlobalPrefix(apiPrefix);
 
   // Set up validation pipe
   app.useGlobalPipes(
@@ -33,22 +34,30 @@ async function bootstrap() {
       transform: true,
       whitelist: true,
       forbidNonWhitelisted: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
     }),
   );
 
   // Set up CORS
   app.enableCors();
 
+  // Serve static files
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads',
+  });
+
   // Set up Swagger documentation
   const swaggerConfig = new DocumentBuilder()
     .setTitle('SpeedCoding API')
     .setDescription('API for the SpeedCoding platform')
-    .setVersion('1.0')
+    .setVersion(configService.get<string>('APP_VERSION', '1.0.0'))
     .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api/docs', app, document);
+  SwaggerModule.setup(`${apiPrefix}/docs`, app, document);
 
   // Get Sentry service
   const sentryService = app.get(SentryService);
@@ -73,7 +82,12 @@ async function bootstrap() {
 
   // Start the application
   await app.listen(port);
-  logger.log(`Application is running on: http://localhost:${port}/api`);
+  logger.log(
+    `Application is running on: http://localhost:${port}/${apiPrefix}`,
+  );
 }
 
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('Error starting application:', err);
+  process.exit(1);
+});

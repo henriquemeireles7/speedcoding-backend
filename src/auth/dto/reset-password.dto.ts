@@ -1,15 +1,24 @@
-import { IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsString, MinLength, IsNotEmpty } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 /**
- * Data Transfer Object for resetting password
+ * Data Transfer Object for password reset
  */
 export class ResetPasswordDto {
-  @IsNotEmpty({ message: 'Token is required' })
-  @IsString({ message: 'Token must be a string' })
+  @ApiProperty({
+    description: 'Reset token received via email',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @IsString()
+  @IsNotEmpty()
   token: string;
 
-  @IsNotEmpty({ message: 'New password is required' })
-  @IsString({ message: 'New password must be a string' })
-  @MinLength(6, { message: 'New password must be at least 6 characters long' })
+  @ApiProperty({
+    description: 'New password',
+    example: 'newSecurePassword123',
+    minLength: 8,
+  })
+  @IsString()
+  @MinLength(8)
   newPassword: string;
 }

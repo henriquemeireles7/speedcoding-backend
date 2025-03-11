@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { PrismaService } from '../prisma/prisma.service';
+import { UsersModule } from '../users/users.module';
 import { MailModule } from '../mail/mail.module';
 import { EmailVerifiedGuard } from './guards/email-verified.guard';
 
@@ -14,15 +16,22 @@ import { EmailVerifiedGuard } from './guards/email-verified.guard';
  */
 @Module({
   imports: [
-    PassportModule.register({ defaultStrategy: 'jwt' }),
-    JwtModule.register({
-      secret: process.env.JWT_SECRET || 'supersecret', // Use environment variable or default
-      signOptions: { expiresIn: '24h' }, // Token expires in 24 hours
-    }),
+    UsersModule,
+    PassportModule,
     MailModule,
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),
+        signOptions: {
+          expiresIn: configService.get<string>('JWT_EXPIRES_IN', '15m'),
+        },
+      }),
+    }),
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, PrismaService, EmailVerifiedGuard],
-  exports: [JwtStrategy, PassportModule, EmailVerifiedGuard],
+  exports: [AuthService, JwtStrategy, PassportModule, EmailVerifiedGuard],
 })
 export class AuthModule {}

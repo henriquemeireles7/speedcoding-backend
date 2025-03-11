@@ -17,6 +17,9 @@ import { RedisModule } from './redis/redis.module';
 import { MetricsModule, MetricsInterceptor } from './metrics';
 import { SentryModule, SentryExceptionFilter } from './sentry';
 import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 /**
  * Main application module
@@ -29,6 +32,12 @@ import { UsersModule } from './users/users.module';
       isGlobal: true,
     }),
     AppConfigModule,
+
+    // Static file serving
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads',
+    }),
 
     // Infrastructure modules
     RedisModule,
@@ -43,8 +52,8 @@ import { UsersModule } from './users/users.module';
 
     // Feature modules
     UsersModule,
+    AuthModule,
     // Uncomment these as they are implemented
-    // AuthModule,
     // RunsModule,
     // SubmissionsModule,
     // VerifyModule,

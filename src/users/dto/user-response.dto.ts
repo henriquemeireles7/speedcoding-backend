@@ -1,4 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { SocialMediaLinkDto } from './update-user.dto';
 
 /**
  * Data Transfer Object for user response
@@ -29,33 +30,57 @@ export class UserResponseDto {
   })
   isEmailVerified: boolean;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Display name for the user',
     example: 'John Doe',
-    required: false,
   })
-  displayName?: string;
+  displayName?: string | null;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'User biography',
     example: 'Software developer passionate about coding challenges',
-    required: false,
   })
-  bio?: string;
+  bio?: string | null;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'URL to user avatar image',
     example: 'https://example.com/avatars/johndoe.jpg',
-    required: false,
   })
-  avatarUrl?: string;
+  avatarUrl?: string | null;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'User preferences',
     example: { theme: 'dark', notifications: true },
-    required: false,
   })
-  preferences?: Record<string, any>;
+  preferences?: Record<string, any> | null;
+
+  @ApiPropertyOptional({
+    description: 'User location',
+    example: 'San Francisco, CA',
+  })
+  location?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'User website',
+    example: 'https://johndoe.com',
+  })
+  website?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Social media links',
+    example: [
+      { platform: 'github', url: 'https://github.com/johndoe' },
+      { platform: 'twitter', url: 'https://twitter.com/johndoe' },
+    ],
+    type: [SocialMediaLinkDto],
+  })
+  socialLinks?: SocialMediaLinkDto[] | null;
+
+  @ApiPropertyOptional({
+    description: 'User skills',
+    example: ['JavaScript', 'TypeScript', 'React', 'Node.js'],
+  })
+  skills?: string[] | null;
 
   @ApiProperty({
     description: 'Date when the user was created',

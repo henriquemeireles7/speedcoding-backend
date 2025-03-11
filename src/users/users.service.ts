@@ -3,10 +3,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 import { UserResponseDto } from './dto/user-response.dto';
+import { SocialMediaLinkDto } from './dto/update-user.dto';
 
 /**
- * Service for managing users
- * Handles CRUD operations for user profiles
+ * Service for managing user profiles
  */
 @Injectable()
 export class UsersService {
@@ -15,8 +15,7 @@ export class UsersService {
   /**
    * Find a user by ID
    * @param id User ID
-   * @returns User object
-   * @throws NotFoundException if user not found
+   * @returns User entity
    */
   async findById(id: string): Promise<User> {
     const user = await this.prisma.user.findUnique({
@@ -27,60 +26,65 @@ export class UsersService {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
 
-    return user;
+    return user as unknown as User;
   }
 
   /**
    * Find a user by email
-   * @param email User email
-   * @returns User object or null if not found
+   * @param email Email address
+   * @returns User entity or null if not found
    */
   async findByEmail(email: string): Promise<User | null> {
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { email },
     });
+
+    return user as unknown as User;
   }
 
   /**
    * Find a user by username
    * @param username Username
-   * @returns User object or null if not found
+   * @returns User entity or null if not found
    */
   async findByUsername(username: string): Promise<User | null> {
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { username },
     });
+
+    return user as unknown as User;
   }
 
   /**
    * Update a user's profile
    * @param id User ID
-   * @param updateUserDto Update data
-   * @returns Updated user
-   * @throws NotFoundException if user not found
+   * @param updateUserDto Updated user data
+   * @returns Updated user entity
    */
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     // Check if user exists
     await this.findById(id);
 
-    return this.prisma.user.update({
+    // Update user
+    const updatedUser = await this.prisma.user.update({
       where: { id },
       data: updateUserDto,
     });
+
+    return updatedUser as unknown as User;
   }
 
   /**
-   * Delete a user and all related data
+   * Remove a user and all related data
    * @param id User ID
-   * @throws NotFoundException if user not found
    */
   async remove(id: string): Promise<void> {
     // Check if user exists
     await this.findById(id);
 
-    // Use transaction to delete related data
+    // Delete user and all related data in a transaction
     await this.prisma.$transaction(async (prisma) => {
-      // Delete related data first (refreshTokens, runs, etc.)
+      // Delete refresh tokens
       await prisma.refreshToken.deleteMany({
         where: { userId: id },
       });
@@ -91,21 +95,24 @@ export class UsersService {
         select: { id: true },
       });
 
-      const runIds = runs.map((run) => run.id);
+      for (const run of runs) {
+        // Delete milestones
+        await prisma.milestone.deleteMany({
+          where: { runId: run.id },
+        });
 
-      await prisma.milestone.deleteMany({
-        where: { runId: { in: runIds } },
-      });
+        // Delete submissions
+        await prisma.submission.deleteMany({
+          where: { runId: run.id },
+        });
+      }
 
-      await prisma.submission.deleteMany({
-        where: { runId: { in: runIds } },
-      });
-
+      // Delete runs
       await prisma.run.deleteMany({
         where: { userId: id },
       });
 
-      // Finally delete the user
+      // Delete user
       await prisma.user.delete({
         where: { id },
       });
@@ -118,10 +125,12 @@ export class UsersService {
    * @returns User statistics
    */
   async getUserStats(userId: string): Promise<any> {
+    // Get total runs
     const totalRuns = await this.prisma.run.count({
       where: { userId },
     });
 
+    // Get completed runs
     const completedRuns = await this.prisma.run.count({
       where: {
         userId,
@@ -129,6 +138,7 @@ export class UsersService {
       },
     });
 
+    // Get fastest run
     const fastestRun = await this.prisma.run.findFirst({
       where: {
         userId,
@@ -137,36 +147,60 @@ export class UsersService {
       orderBy: {
         totalTimeInSeconds: 'asc',
       },
+      select: {
+        id: true,
+        totalTimeInSeconds: true,
+        techStack: true,
+        vibeId: true,
+      },
     });
+
+    // Get vibe details for fastest run
+    let vibeName: string | null = null;
+    if (fastestRun && fastestRun.vibeId) {
+      const vibe = await this.prisma.vibe.findUnique({
+        where: { id: fastestRun.vibeId },
+        select: { name: true },
+      });
+      vibeName = vibe ? vibe.name : null;
+    }
 
     return {
       totalRuns,
       completedRuns,
-      fastestRunTime: fastestRun?.totalTimeInSeconds || null,
+      completionRate: totalRuns > 0 ? (completedRuns / totalRuns) * 100 : 0,
+      fastestRun: fastestRun
+        ? {
+            id: fastestRun.id,
+            time: fastestRun.totalTimeInSeconds,
+            techStack: fastestRun.techStack,
+            vibe: vibeName,
+          }
+        : null,
     };
   }
 
   /**
-   * Get user's runs
+   * Get user runs
    * @param userId User ID
    * @param limit Maximum number of runs to return
    * @param offset Number of runs to skip
-   * @returns Array of runs
+   * @returns Array of user runs
    */
   async getUserRuns(userId: string, limit = 10, offset = 0): Promise<any[]> {
-    return this.prisma.run.findMany({
+    const runs = await this.prisma.run.findMany({
       where: { userId },
-      include: {
-        vibe: true,
-        milestones: true,
-        submissions: true,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: { createdAt: 'desc' },
       take: limit,
       skip: offset,
+      include: {
+        vibe: {
+          select: { name: true },
+        },
+      },
     });
+
+    return runs;
   }
 
   /**
@@ -175,29 +209,23 @@ export class UsersService {
    * @returns UserResponseDto
    */
   mapToDto(user: User): UserResponseDto {
-    const {
-      id,
-      username,
-      email,
-      isEmailVerified,
-      displayName,
-      bio,
-      avatarUrl,
-      preferences,
-      createdAt,
-      updatedAt,
-    } = user;
-    return {
-      id,
-      username,
-      email,
-      isEmailVerified,
-      displayName,
-      bio,
-      avatarUrl,
-      preferences,
-      createdAt,
-      updatedAt,
+    const dto: UserResponseDto = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      isEmailVerified: user.isEmailVerified,
+      displayName: user.displayName,
+      bio: user.bio,
+      avatarUrl: user.avatarUrl,
+      preferences: user.preferences,
+      location: user.location,
+      website: user.website,
+      socialLinks: user.socialLinks as unknown as SocialMediaLinkDto[] | null,
+      skills: user.skills,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
     };
+
+    return dto;
   }
 }

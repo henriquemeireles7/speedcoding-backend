@@ -20,8 +20,9 @@ import {
 } from './dto';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
-import { addDays, addHours } from 'date-fns';
-import { User, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import { UsersService } from '../users/users.service';
+import { ConfigService } from '@nestjs/config';
 
 /**
  * Authentication Service
@@ -31,8 +32,10 @@ import { User, Prisma } from '@prisma/client';
 export class AuthService {
   constructor(
     private prisma: PrismaService,
+    private usersService: UsersService,
     private jwtService: JwtService,
     private mailService: MailService,
+    private configService: ConfigService,
   ) {}
 
   /**
@@ -43,36 +46,29 @@ export class AuthService {
   async register(registerDto: RegisterDto): Promise<TokensDto> {
     const { username, email, password } = registerDto;
 
-    // Check if username already exists
-    const existingUser = await this.prisma.user.findFirst({
-      where: {
-        OR: [{ username }, { email }],
-      },
-    });
-
-    if (existingUser) {
-      if (existingUser.username === username) {
-        throw new ConflictException('Username already exists');
-      }
-      if (existingUser.email === email) {
-        throw new ConflictException('Email already exists');
-      }
+    // Check if user already exists
+    const existingUserByEmail = await this.usersService.findByEmail(email);
+    if (existingUserByEmail) {
+      throw new ConflictException('Email already in use');
     }
 
-    // Hash the password
-    const saltRounds = 10;
-    const passwordHash = await bcrypt.hash(password, saltRounds);
+    const existingUserByUsername =
+      await this.usersService.findByUsername(username);
+    if (existingUserByUsername) {
+      throw new ConflictException('Username already in use');
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
 
     // Generate verification token
     const verificationToken = uuidv4();
-    const verificationTokenExpiry = addDays(new Date(), 1); // 24 hours
+    const verificationTokenExpiry = new Date();
+    verificationTokenExpiry.setHours(verificationTokenExpiry.getHours() + 24); // 24 hours
 
-    // Create the user in a transaction with a refresh token
-    const result = await this.prisma.$transaction<{
-      user: User;
-      tokens: TokensDto;
-    }>(async (prisma: Prisma.TransactionClient) => {
-      // Create the user
+    // Create user and refresh token in a transaction
+    const result = await this.prisma.$transaction(async (prisma) => {
+      // Create user
       const user = await prisma.user.create({
         data: {
           username,
@@ -141,21 +137,19 @@ export class AuthService {
   ): Promise<void> {
     const { email } = resendVerificationDto;
 
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-    });
-
+    const user = await this.usersService.findByEmail(email);
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
     if (user.isEmailVerified) {
-      throw new BadRequestException('Email is already verified');
+      throw new BadRequestException('Email already verified');
     }
 
     // Generate new verification token
     const verificationToken = uuidv4();
-    const verificationTokenExpiry = addDays(new Date(), 1); // 24 hours
+    const verificationTokenExpiry = new Date();
+    verificationTokenExpiry.setHours(verificationTokenExpiry.getHours() + 24); // 24 hours
 
     await this.prisma.user.update({
       where: { id: user.id },
@@ -175,25 +169,23 @@ export class AuthService {
 
   /**
    * Request password reset
-   * @param requestPasswordResetDto Email for password reset
+   * @param requestPasswordResetDto Email to send password reset to
    */
   async requestPasswordReset(
     requestPasswordResetDto: RequestPasswordResetDto,
   ): Promise<void> {
     const { email } = requestPasswordResetDto;
 
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-    });
-
+    const user = await this.usersService.findByEmail(email);
     if (!user) {
-      // Don't reveal that the user doesn't exist for security reasons
+      // Don't reveal if user exists or not
       return;
     }
 
-    // Generate reset token
+    // Generate password reset token
     const resetToken = uuidv4();
-    const resetTokenExpiry = addHours(new Date(), 1); // 1 hour
+    const resetTokenExpiry = new Date();
+    resetTokenExpiry.setHours(resetTokenExpiry.getHours() + 1); // 1 hour
 
     await this.prisma.user.update({
       where: { id: user.id },
@@ -204,12 +196,16 @@ export class AuthService {
     });
 
     // Send password reset email
-    await this.mailService.sendPasswordResetEmail(user.email, resetToken);
+    await this.mailService.sendPasswordResetEmail(
+      user.email,
+      user.username,
+      resetToken,
+    );
   }
 
   /**
    * Reset password
-   * @param resetPasswordDto Reset password data
+   * @param resetPasswordDto Password reset data
    */
   async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<void> {
     const { token, newPassword } = resetPasswordDto;
@@ -227,49 +223,41 @@ export class AuthService {
       throw new BadRequestException('Invalid or expired reset token');
     }
 
-    // Hash the new password
-    const saltRounds = 10;
-    const passwordHash = await bcrypt.hash(newPassword, saltRounds);
+    // Hash new password
+    const passwordHash = await bcrypt.hash(newPassword, 10);
 
-    // Update user and revoke all refresh tokens in a transaction
-    await this.prisma.$transaction(async (prisma: Prisma.TransactionClient) => {
-      // Update user
-      await prisma.user.update({
+    // Update user and revoke all refresh tokens
+    await this.prisma.$transaction([
+      this.prisma.user.update({
         where: { id: user.id },
         data: {
           passwordHash,
           resetToken: null,
           resetTokenExpiry: null,
         },
-      });
-
-      // Revoke all refresh tokens for security
-      await prisma.refreshToken.updateMany({
+      }),
+      this.prisma.refreshToken.updateMany({
         where: { userId: user.id },
         data: { isRevoked: true },
-      });
-    });
+      }),
+    ]);
   }
 
   /**
-   * Login a user
+   * Login user
    * @param loginDto Login credentials
    * @returns Access and refresh tokens
    */
   async login(loginDto: LoginDto): Promise<TokensDto> {
     const { email, password } = loginDto;
 
-    // Find the user by email
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-    });
-
-    // If user doesn't exist or password doesn't match, throw an error
+    // Find user by email
+    const user = await this.usersService.findByEmail(email);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Compare the provided password with the stored hash
+    // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
@@ -278,77 +266,79 @@ export class AuthService {
     // Generate tokens
     const tokens = this.generateTokens(user.id, user.username, user.email);
 
-    // Store refresh token in database
-    await this.storeRefreshToken(this.prisma, tokens.refreshToken, user.id);
+    // Store refresh token
+    await this.prisma.$transaction(async (prisma) => {
+      await this.storeRefreshToken(prisma, tokens.refreshToken, user.id);
+    });
 
     return tokens;
   }
 
   /**
-   * Refresh access token using a valid refresh token
+   * Refresh access token using refresh token
    * @param refreshTokenDto Refresh token
    * @returns New access and refresh tokens
    */
   async refreshTokens(refreshTokenDto: RefreshTokenDto): Promise<TokensDto> {
     const { refreshToken } = refreshTokenDto;
 
-    // Find the refresh token in the database
-    const storedToken = (await this.prisma.refreshToken.findUnique({
-      where: { token: refreshToken },
-      include: { user: true },
-    })) as Prisma.RefreshTokenGetPayload<{ include: { user: true } }> | null;
+    // Find refresh token in database
+    const storedToken = await this.prisma.refreshToken.findFirst({
+      where: {
+        token: refreshToken,
+        isRevoked: false,
+        expiresAt: {
+          gte: new Date(),
+        },
+      },
+      include: {
+        user: true,
+      },
+    });
 
-    // Validate the token
-    if (
-      !storedToken ||
-      storedToken.isRevoked ||
-      new Date() > storedToken.expiresAt
-    ) {
+    if (!storedToken) {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
+    const { user } = storedToken;
+
+    // Revoke old refresh token
+    await this.prisma.refreshToken.update({
+      where: { id: storedToken.id },
+      data: { isRevoked: true },
+    });
+
     // Generate new tokens
-    const tokens = this.generateTokens(
-      storedToken.user.id,
-      storedToken.user.username,
-      storedToken.user.email,
-    );
+    const tokens = this.generateTokens(user.id, user.username, user.email);
 
-    // Revoke the old token and store the new one in a transaction
-    await this.prisma.$transaction(async (prisma: Prisma.TransactionClient) => {
-      // Revoke the old token
-      await prisma.refreshToken.update({
-        where: { id: storedToken.id },
-        data: { isRevoked: true },
-      });
-
-      // Store the new token
-      await this.storeRefreshToken(
-        prisma,
-        tokens.refreshToken,
-        storedToken.user.id,
-      );
+    // Store new refresh token
+    await this.prisma.$transaction(async (prisma) => {
+      await this.storeRefreshToken(prisma, tokens.refreshToken, user.id);
     });
 
     return tokens;
   }
 
   /**
-   * Logout a user by revoking their refresh token
+   * Logout user by revoking refresh token
    * @param refreshToken Refresh token to revoke
    */
   async logout(refreshToken: string): Promise<void> {
     await this.prisma.refreshToken.updateMany({
-      where: { token: refreshToken, isRevoked: false },
-      data: { isRevoked: true },
+      where: {
+        token: refreshToken,
+      },
+      data: {
+        isRevoked: true,
+      },
     });
   }
 
   /**
-   * Generate JWT tokens for a user
+   * Generate JWT tokens
    * @param userId User ID
    * @param username Username
-   * @param email User email
+   * @param email Email
    * @returns Access and refresh tokens
    */
   private generateTokens(
@@ -359,7 +349,12 @@ export class AuthService {
     const payload = { sub: userId, username, email };
 
     const accessToken = this.jwtService.sign(payload);
-    const refreshToken = uuidv4(); // Use UUID for refresh token
+
+    // Generate refresh token with longer expiry
+    const refreshToken = this.jwtService.sign(payload, {
+      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d'),
+    });
 
     return {
       accessToken,
@@ -368,8 +363,8 @@ export class AuthService {
   }
 
   /**
-   * Store a refresh token in the database
-   * @param prisma Prisma client
+   * Store refresh token in database
+   * @param prisma Prisma transaction client
    * @param refreshToken Refresh token
    * @param userId User ID
    */
@@ -378,8 +373,9 @@ export class AuthService {
     refreshToken: string,
     userId: string,
   ): Promise<void> {
-    // Set expiration date (30 days from now)
-    const expiresAt = addDays(new Date(), 30);
+    // Calculate expiry date (7 days from now)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
 
     await prisma.refreshToken.create({
       data: {
@@ -391,27 +387,12 @@ export class AuthService {
   }
 
   /**
-   * Get user profile by ID
+   * Get user profile
    * @param userId User ID
-   * @returns User profile data
+   * @returns User profile
    */
   async getProfile(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        createdAt: true,
-        updatedAt: true,
-        isEmailVerified: true,
-      },
-    });
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    return user;
+    const user = await this.usersService.findById(userId);
+    return this.usersService.mapToDto(user);
   }
 }

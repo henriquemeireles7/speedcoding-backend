@@ -1,25 +1,30 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Resend } from 'resend';
+import { ConfigService } from '@nestjs/config';
 
 /**
- * Mail Service for sending emails using Resend
+ * Service for sending emails
  */
 @Injectable()
 export class MailService {
   private readonly resend: Resend;
   private readonly logger = new Logger(MailService.name);
   private readonly fromEmail: string;
+  private frontendUrl: string;
 
-  constructor() {
+  constructor(private configService: ConfigService) {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
       this.logger.warn(
-        'RESEND_API_KEY is not set. Email functionality will not work.',
+        'RESEND_API_KEY not set. Email functionality will be limited.',
       );
     }
-
     this.resend = new Resend(apiKey);
     this.fromEmail = process.env.FROM_EMAIL || 'noreply@speedcoding.app';
+    this.frontendUrl = this.configService.get<string>(
+      'FRONTEND_URL',
+      'http://localhost:3000',
+    );
   }
 
   /**
@@ -33,7 +38,7 @@ export class MailService {
     username: string,
     token: string,
   ): Promise<void> {
-    const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${token}`;
+    const verificationUrl = `${this.frontendUrl}/verify-email?token=${token}`;
 
     try {
       await this.resend.emails.send({
@@ -59,10 +64,15 @@ export class MailService {
   /**
    * Send a password reset email to a user
    * @param email User's email address
+   * @param username User's username
    * @param token Reset token
    */
-  async sendPasswordResetEmail(email: string, token: string): Promise<void> {
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
+  async sendPasswordResetEmail(
+    email: string,
+    username: string,
+    token: string,
+  ): Promise<void> {
+    const resetUrl = `${this.frontendUrl}/reset-password?token=${token}`;
 
     try {
       await this.resend.emails.send({
@@ -71,6 +81,7 @@ export class MailService {
         subject: 'Reset your SpeedCoding password',
         html: `
           <h1>Password Reset Request</h1>
+          <p>Hello ${username},</p>
           <p>You requested to reset your password. Click the link below to set a new password:</p>
           <p><a href="${resetUrl}">Reset Password</a></p>
           <p>This link will expire in 1 hour.</p>
