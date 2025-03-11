@@ -7,6 +7,7 @@ import {
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { MetricsService } from './metrics.service';
+import { Request, Response } from 'express';
 
 /**
  * Interceptor that automatically records HTTP metrics for all requests
@@ -20,7 +21,7 @@ export class MetricsInterceptor implements NestInterceptor {
       return next.handle();
     }
 
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<Request>();
     const { method, url } = request;
     const startTime = Date.now();
     const requestSize = request.headers['content-length']
@@ -38,7 +39,7 @@ export class MetricsInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap({
         next: (data) => {
-          const response = context.switchToHttp().getResponse();
+          const response = context.switchToHttp().getResponse<Response>();
           const statusCode = response.statusCode;
           const responseSize = JSON.stringify(data).length;
           const duration = (Date.now() - startTime) / 1000; // Convert to seconds
@@ -52,8 +53,9 @@ export class MetricsInterceptor implements NestInterceptor {
             responseSize,
           );
         },
-        error: (error) => {
-          const statusCode = error.status || 500;
+        error: (error: any) => {
+          // Use type assertion to safely access the status property
+          const statusCode = (error as { status?: number }).status || 500;
           const duration = (Date.now() - startTime) / 1000; // Convert to seconds
 
           this.metricsService.recordHttpRequest(

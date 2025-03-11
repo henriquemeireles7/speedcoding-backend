@@ -16,6 +16,7 @@ import { CacheInterceptor } from './cache/cache.interceptor';
 import { RedisModule } from './redis/redis.module';
 import { MetricsModule, MetricsInterceptor } from './metrics';
 import { SentryModule, SentryExceptionFilter } from './sentry';
+import { UsersModule } from './users/users.module';
 
 /**
  * Main application module
@@ -41,6 +42,7 @@ import { SentryModule, SentryExceptionFilter } from './sentry';
     HealthModule,
 
     // Feature modules
+    UsersModule,
     // Uncomment these as they are implemented
     // AuthModule,
     // RunsModule,

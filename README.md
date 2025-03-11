@@ -36,7 +36,7 @@ The database consists of the following models:
 ### User
 
 - Stores user authentication information
-- Fields: id (UUID), username, email, passwordHash, isEmailVerified, createdAt, updatedAt
+- Fields: id (UUID), username, email, passwordHash, isEmailVerified, displayName, bio, avatarUrl, preferences (JSON), createdAt, updatedAt
 - Relations: runs (one-to-many), refreshTokens (one-to-many)
 
 ### RefreshToken
@@ -85,6 +85,15 @@ The SpeedCoding backend includes comprehensive monitoring and metrics collection
 
 - `/metrics`: Exposes all Prometheus metrics
 - `/metrics/health`: Simple health check for the metrics service
+
+### Metrics Implementation
+
+The metrics system is implemented using the following components:
+
+- **MetricsModule**: Configures Prometheus with default metrics and labels
+- **MetricsService**: Provides methods for recording custom metrics
+- **MetricsInterceptor**: Automatically records HTTP request metrics
+- **MetricsController**: Exposes a health check endpoint
 
 ### Grafana Dashboards
 
@@ -186,6 +195,15 @@ The application includes structured logging for better observability:
 - `POST /auth/reset-password` - Reset password
 - `GET /auth/profile` - Get authenticated user profile
 
+### Users
+
+- `GET /users/me` - Get current user profile
+- `GET /users/:id` - Get user by ID
+- `PATCH /users/:id` - Update user profile
+- `DELETE /users/:id` - Delete user
+- `GET /users/:id/stats` - Get user statistics
+- `GET /users/:id/runs` - Get user runs
+
 ### Runs
 
 - `POST /runs/start` - Start a new run with a specified vibe and tech stack
@@ -229,6 +247,11 @@ The application includes structured logging for better observability:
 
 - `GET /health` - Check the health of the application and its dependencies
 
+### Metrics
+
+- `GET /metrics` - Prometheus metrics endpoint
+- `GET /metrics/health` - Health check for the metrics service
+
 ## API Documentation
 
 The API is documented using Swagger/OpenAPI. You can access the documentation at `/api/docs` when the server is running.
@@ -250,56 +273,58 @@ $ npm install
 # Generate Prisma client
 $ npx prisma generate
 
-# Push schema to database
-$ npx prisma db push
+# Run database migrations
+$ npx prisma migrate dev
 
-# Start development server
+# Start the development server
 $ npm run start:dev
+
+# Build for production
+$ npm run build
+
+# Start the production server
+$ npm run start:prod
 ```
 
 ## Environment Variables
 
-The project requires the following environment variables:
+Create a `.env` file in the root directory with the following variables:
 
 ```
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/speedcode_db
-
-# JWT Authentication
-JWT_SECRET=your_jwt_secret_key
-JWT_EXPIRES_IN=1d
-
-# Email service (Resend)
-RESEND_API_KEY=your_resend_api_key
-FROM_EMAIL=noreply@speedcoding.app
-
-# Frontend URL for email links
-FRONTEND_URL=http://localhost:3000
-
-# Server configuration
-PORT=3001
+# Application
 NODE_ENV=development
+PORT=3000
+API_PREFIX=api
 APP_VERSION=1.0.0
 
-# Redis configuration
+# Database
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/speedcoding
+
+# JWT
+JWT_SECRET=your-jwt-secret
+JWT_EXPIRES_IN=15m
+JWT_REFRESH_SECRET=your-jwt-refresh-secret
+JWT_REFRESH_EXPIRES_IN=7d
+
+# Redis
 REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_PASSWORD=
 REDIS_DB=0
 
-# Sentry configuration
+# Sentry
 SENTRY_DSN=https://your-sentry-dsn@sentry.io/project-id
+
+# Supabase Storage
+SUPABASE_URL=https://your-supabase-project.supabase.co
+SUPABASE_KEY=your-supabase-key
+SUPABASE_BUCKET=videos
 ```
 
-## Development
+## Contributing
 
-This project follows NestJS best practices with a modular architecture:
-
-- Each feature has its own module, controller, and service
-- DTOs are used for request/response validation
-- Guards protect authenticated routes
-- Prisma is used as the primary database interface
-- UUID is used for all IDs for better security and distribution
-- Global filters and interceptors ensure consistent responses
-- Configuration is validated at startup to prevent runtime errors
-- Health checks monitor the application and its dependencies
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/my-feature`)
+3. Commit your changes (`git commit -m 'feat: add my feature'`)
+4. Push to the branch (`git push origin feature/my-feature`)
+5. Open a Pull Request
