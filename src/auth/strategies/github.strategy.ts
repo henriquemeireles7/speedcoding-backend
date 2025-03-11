@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-github2';
 import { ConfigService } from '@nestjs/config';
-import { AuthService } from '../auth.service';
+import { AuthService } from '../services/auth.service';
+import { SocialUserDto } from '../dto/social-user.dto';
 
 /**
  * GitHub OAuth strategy for authentication
@@ -47,7 +48,7 @@ export class GitHubStrategy extends PassportStrategy(Strategy, 'github') {
       lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
     }
 
-    const user = {
+    const socialUser: SocialUserDto = {
       email:
         emails && emails.length > 0
           ? emails[0].value
@@ -55,15 +56,17 @@ export class GitHubStrategy extends PassportStrategy(Strategy, 'github') {
       firstName,
       lastName,
       picture: photos && photos.length > 0 ? photos[0].value : null,
-      accessToken,
       provider: 'github',
       providerId: profile.id,
       username: username,
     };
 
-    // Process the user in the auth service
-    const result = await this.authService.socialLogin(user);
-
-    done(null, result);
+    try {
+      // Process the user in the auth service
+      const result = await this.authService.socialLogin(socialUser);
+      done(null, result);
+    } catch (error) {
+      done(error, null);
+    }
   }
 }

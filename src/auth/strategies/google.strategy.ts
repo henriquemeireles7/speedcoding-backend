@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, VerifyCallback } from 'passport-google-oauth20';
 import { ConfigService } from '@nestjs/config';
-import { AuthService } from '../auth.service';
+import { AuthService } from '../services/auth.service';
+import { SocialUserDto } from '../dto/social-user.dto';
 
 /**
  * Google OAuth2 strategy for authentication
@@ -36,19 +37,21 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   ): Promise<any> {
     const { name, emails, photos } = profile;
 
-    const user = {
+    const socialUser: SocialUserDto = {
       email: emails[0].value,
       firstName: name.givenName,
       lastName: name.familyName,
       picture: photos[0].value,
-      accessToken,
       provider: 'google',
       providerId: profile.id,
     };
 
-    // Process the user in the auth service
-    const result = await this.authService.socialLogin(user);
-
-    done(null, result);
+    try {
+      // Process the user in the auth service
+      const result = await this.authService.socialLogin(socialUser);
+      done(null, result);
+    } catch (error) {
+      done(error, null);
+    }
   }
 }

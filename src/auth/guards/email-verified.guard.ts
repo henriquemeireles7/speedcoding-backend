@@ -4,7 +4,7 @@ import {
   ExecutionContext,
   UnauthorizedException,
 } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { UserRepository } from '../repositories/user.repository';
 
 /**
  * Guard to check if user's email is verified
@@ -12,7 +12,7 @@ import { PrismaService } from '../../prisma/prisma.service';
  */
 @Injectable()
 export class EmailVerifiedGuard implements CanActivate {
-  constructor(private prisma: PrismaService) {}
+  constructor(private userRepository: UserRepository) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
@@ -24,10 +24,7 @@ export class EmailVerifiedGuard implements CanActivate {
     }
 
     // Get the user from the database to check email verification status
-    const dbUser = await this.prisma.user.findUnique({
-      where: { id: user.sub },
-      select: { isEmailVerified: true },
-    });
+    const dbUser = await this.userRepository.findById(user.sub);
 
     if (!dbUser) {
       throw new UnauthorizedException('User not found');
