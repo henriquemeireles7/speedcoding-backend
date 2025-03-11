@@ -6,9 +6,9 @@ A NestJS-based backend for the SpeedCoding platform, which allows users to track
 
 SpeedCoding is a platform that enables users to:
 
-- Track coding sessions with start and end times
-- Complete coding milestones during sessions
-- Submit completed sessions with video recordings
+- Track coding runs with start and end times
+- Complete coding milestones during runs
+- Submit completed runs with video recordings
 - Verify milestone completions
 
 ## Tech Stack
@@ -27,7 +27,7 @@ The database consists of the following models:
 
 - Stores user authentication information
 - Fields: id, username, passwordHash, createdAt
-- Relations: sessions (one-to-many), refreshTokens (one-to-many)
+- Relations: runs (one-to-many), refreshTokens (one-to-many)
 
 ### RefreshToken
 
@@ -35,23 +35,23 @@ The database consists of the following models:
 - Fields: id, token, userId, expiresAt, createdAt, isRevoked
 - Relations: user (many-to-one)
 
-### Session
+### Run
 
-- Tracks coding sessions
+- Tracks coding runs
 - Fields: id, userId, techStack, startTime, endTime, totalTime
 - Relations: user (many-to-one), milestones (one-to-many), submission (one-to-one)
 
 ### Milestone
 
-- Records individual milestone completions during a session
-- Fields: id, sessionId, milestoneNumber, completedAt, passed
-- Relations: session (many-to-one)
+- Records individual milestone completions during a run
+- Fields: id, runId, milestoneNumber, completedAt, passed
+- Relations: run (many-to-one)
 
 ### Submission
 
-- Stores final submission data for completed sessions
-- Fields: id, sessionId, packages, videoUrl, submittedAt, status
-- Relations: session (one-to-one)
+- Stores final submission data for completed runs
+- Fields: id, runId, packages, videoUrl, submittedAt, status
+- Relations: run (one-to-one)
 - Status enum: PENDING, APPROVED, REJECTED
 
 ## Authentication System
@@ -80,10 +80,10 @@ The authentication system implements:
 - `POST /api/v1/auth/refresh` - Refresh access token
 - `POST /api/v1/auth/logout` - Revoke refresh token
 
-### Sessions
+### Runs
 
-- `POST /api/v1/sessions/start` - Start a new coding session
-- `POST /api/v1/sessions/end` - End a session and submit results
+- `POST /api/v1/runs/start` - Start a new coding run
+- `POST /api/v1/runs/end` - End a run and submit results
 
 ### Milestones
 

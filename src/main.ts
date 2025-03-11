@@ -18,7 +18,8 @@ async function bootstrap() {
     }),
   );
 
-  // Configure Swagger
+  // Configure Swagger - Disabled for now
+  /*
   const config = new DocumentBuilder()
     .setTitle('SpeedCoding API')
     .setDescription('API documentation for the SpeedCoding platform')
@@ -41,6 +42,7 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
+  */
 
   await app.listen(process.env.PORT ?? 3000);
 }

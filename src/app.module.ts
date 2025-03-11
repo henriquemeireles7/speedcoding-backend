@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
-import { SessionsModule } from './sessions/sessions.module';
+import { RunsModule } from './runs/runs.module';
 import { MilestonesModule } from './milestones/milestones.module';
 import { PrismaService } from './prisma/prisma.service';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -20,7 +20,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
       },
     ]),
     AuthModule,
-    SessionsModule,
+    RunsModule,
     MilestonesModule,
   ],
   controllers: [AppController],

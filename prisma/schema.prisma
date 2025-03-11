@@ -19,7 +19,7 @@ model User {
   verificationTokenExpiry DateTime?
   resetToken            String?   @db.VarChar(255)
   resetTokenExpiry      DateTime?
-  sessions              Session[] // One-to-many relation
+  runs                  Run[]     // One-to-many relation
   refreshTokens         RefreshToken[] // One-to-many relation for refresh tokens
 }
 
@@ -34,8 +34,8 @@ model RefreshToken {
   isRevoked Boolean  @default(false)
 }
 
-// Session model for speedrun tracking
-model Session {
+// Run model for speedrun tracking
+model Run {
   id         Int          @id @default(autoincrement())
   userId     Int
   user       User         @relation(fields: [userId], references: [id])
@@ -50,8 +50,8 @@ model Session {
 // Milestone model for individual milestone completions
 model Milestone {
   id             Int      @id @default(autoincrement())
-  sessionId      Int
-  session        Session  @relation(fields: [sessionId], references: [id])
+  runId          Int
+  run            Run      @relation(fields: [runId], references: [id])
   milestoneNumber Int     @db.SmallInt // 1 to 7
   completedAt    DateTime
   passed         Boolean  @default(false)
@@ -60,8 +60,8 @@ model Milestone {
 // Submission model for final run data
 model Submission {
   id          Int      @id @default(autoincrement())
-  sessionId   Int      @unique
-  session     Session  @relation(fields: [sessionId], references: [id])
+  runId       Int      @unique
+  run         Run      @relation(fields: [runId], references: [id])
   packages    String[] // Array of packages (e.g., ["express", "socket.io"])
   videoUrl    String?  @db.VarChar(255) // Nullable if no recording
   submittedAt DateTime @default(now())

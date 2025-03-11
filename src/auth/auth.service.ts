@@ -44,11 +44,11 @@ export class AuthService {
     const { username, email, password } = registerDto;
 
     // Check if username already exists
-    const existingUser = (await this.prisma.user.findFirst({
+    const existingUser = await this.prisma.user.findFirst({
       where: {
         OR: [{ username }, { email }],
       },
-    })) as User | null;
+    });
 
     if (existingUser) {
       if (existingUser.username === username) {
@@ -73,7 +73,7 @@ export class AuthService {
       tokens: TokensDto;
     }>(async (prisma: Prisma.TransactionClient) => {
       // Create the user
-      const user = (await prisma.user.create({
+      const user = await prisma.user.create({
         data: {
           username,
           email,
@@ -81,7 +81,7 @@ export class AuthService {
           verificationToken,
           verificationTokenExpiry,
         },
-      })) as User;
+      });
 
       // Generate tokens
       const tokens = this.generateTokens(user.id, user.username);
@@ -260,9 +260,9 @@ export class AuthService {
     const { username, password } = loginDto;
 
     // Find the user by username
-    const user = (await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { username },
-    })) as User | null;
+    });
 
     // If user doesn't exist or password doesn't match, throw an error
     if (!user) {
@@ -325,7 +325,7 @@ export class AuthService {
       await this.storeRefreshToken(
         prisma,
         tokens.refreshToken,
-        storedToken.user.id as number,
+        storedToken.user.id,
       );
     });
 
