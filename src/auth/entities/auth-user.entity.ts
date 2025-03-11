@@ -1,4 +1,5 @@
 import { User } from '../../users/entities/user.entity';
+import { User as PrismaUser } from '@prisma/client';
 
 /**
  * Auth User entity
@@ -50,9 +51,29 @@ export class AuthUser extends User {
    * @param data User data from database
    * @returns AuthUser instance
    */
-  static fromDatabaseUser(data: any): AuthUser {
+  static fromDatabaseUser(data: PrismaUser): AuthUser {
     const authUser = new AuthUser();
-    Object.assign(authUser, data);
+    Object.assign(authUser, {
+      id: data.id,
+      username: data.username,
+      email: data.email,
+      passwordHash: data.passwordHash,
+      isEmailVerified: data.isEmailVerified,
+      verificationToken: data.verificationToken,
+      verificationTokenExpiry: data.verificationTokenExpiry,
+      resetToken: data.resetToken,
+      resetTokenExpiry: data.resetTokenExpiry,
+      displayName: data.displayName,
+      bio: data.bio,
+      avatarUrl: data.avatarUrl,
+      preferences: data.preferences,
+      location: data.location,
+      website: data.website,
+      socialLinks: data.socialLinks,
+      skills: data.skills,
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
+    });
     return authUser;
   }
 }
