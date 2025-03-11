@@ -1,18 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import { RegisterDto } from '../dto/register.dto';
-import { LoginDto } from '../dto/login.dto';
-import { TokensDto } from '../dto/tokens.dto';
-import { RefreshTokenDto } from '../dto/refresh-token.dto';
-import { VerifyEmailDto } from '../dto/verify-email.dto';
-import { ResendVerificationDto } from '../dto/resend-verification.dto';
-import { RequestPasswordResetDto } from '../dto/request-password-reset.dto';
-import { ResetPasswordDto } from '../dto/reset-password.dto';
-import { SocialUserDto } from '../dto/social-user.dto';
-import { SocialAuthService } from './social-auth.service';
-import { LoginService } from './login.service';
-import { RegisterService } from './register.service';
+import {
+  RegisterDto,
+  LoginDto,
+  TokensDto,
+  RefreshTokenDto,
+  VerifyEmailDto,
+  ResendVerificationDto,
+  RequestPasswordResetDto,
+  ResetPasswordDto,
+  SocialUserDto,
+} from '../dto';
+import { AuthUserDto } from '../dto/auth-user.dto';
+import { SocialAuthService, LoginService, RegisterService } from './';
 import { UserRepository } from '../repositories/user.repository';
 import { UserNotFoundException } from '../exceptions';
+import { AuthUser } from '../entities/auth-user.entity';
 
 /**
  * Main authentication service
@@ -101,30 +103,19 @@ export class AuthService {
   /**
    * Get user profile
    * @param userId User ID
-   * @returns User profile
+   * @returns User profile DTO
    */
-  async getProfile(userId: string) {
-    const user = await this.userRepository.findById(userId);
-    if (!user) {
+  async getProfile(userId: string): Promise<AuthUserDto> {
+    const userData = await this.userRepository.findById(userId);
+    if (!userData) {
       throw new UserNotFoundException('User not found');
     }
 
-    // Return user profile without sensitive information
-    return {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      isEmailVerified: user.isEmailVerified,
-      displayName: user.displayName,
-      bio: user.bio,
-      avatarUrl: user.avatarUrl,
-      location: user.location,
-      website: user.website,
-      socialLinks: user.socialLinks,
-      skills: user.skills,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    };
+    // Create domain entity from database data
+    const authUser = AuthUser.fromDatabaseUser(userData);
+
+    // Return DTO for API response
+    return AuthUserDto.fromEntity(authUser);
   }
 
   /**

@@ -31,8 +31,8 @@ import {
   ApiBearerAuth,
   ApiExcludeEndpoint,
 } from '@nestjs/swagger';
-import { UserResponseDto } from '../users/dto/user-response.dto';
 import { ConfigService } from '@nestjs/config';
+import { AuthUserDto } from './dto/auth-user.dto';
 
 /**
  * Authentication Controller
@@ -194,11 +194,13 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'Profile retrieved successfully',
-    type: UserResponseDto,
+    type: AuthUserDto,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @HttpCode(HttpStatus.OK)
-  async getProfile(@Req() req: Request & { user: { sub: string } }) {
+  async getProfile(
+    @Req() req: Request & { user: { sub: string } },
+  ): Promise<AuthUserDto> {
     return await this.authService.getProfile(req.user.sub);
   }
 
