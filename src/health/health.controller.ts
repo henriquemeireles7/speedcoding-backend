@@ -7,7 +7,11 @@ import {
   PrismaHealthIndicator,
   HealthCheckResult,
   HealthIndicatorResult,
+  DiskHealthIndicator,
+  MemoryHealthIndicator,
 } from '@nestjs/terminus';
+import { InjectMetric } from '@willsoto/nestjs-prometheus';
+import { Registry } from 'prom-client';
 
 /**
  * Health check controller for monitoring application status
@@ -20,6 +24,10 @@ export class HealthController {
     private health: HealthCheckService,
     private prismaHealth: PrismaHealthIndicator,
     private prisma: PrismaService,
+    private diskHealth: DiskHealthIndicator,
+    private memoryHealth: MemoryHealthIndicator,
+    @InjectMetric('prom_client_default_registry')
+    private readonly registry: Registry,
   ) {}
 
   /**
@@ -45,6 +53,24 @@ export class HealthController {
                 status: { type: 'string', example: 'up' },
               },
             },
+            disk: {
+              type: 'object',
+              properties: {
+                status: { type: 'string', example: 'up' },
+              },
+            },
+            memory: {
+              type: 'object',
+              properties: {
+                status: { type: 'string', example: 'up' },
+              },
+            },
+            prometheus: {
+              type: 'object',
+              properties: {
+                status: { type: 'string', example: 'up' },
+              },
+            },
           },
         },
       },
@@ -59,6 +85,28 @@ export class HealthController {
           'database',
           this.prisma,
         ) as Promise<HealthIndicatorResult>,
+
+      // Check disk usage
+      async () =>
+        this.diskHealth.checkStorage('disk', {
+          path: '/',
+          threshold: 0.9, // 90% threshold
+        }),
+
+      // Check memory usage
+      async () => this.memoryHealth.checkHeap('memory', 0.9), // 90% threshold
+
+      // Check Prometheus metrics
+      async () => {
+        // If registry exists, Prometheus is working
+        const isHealthy = !!this.registry;
+
+        return Promise.resolve({
+          prometheus: {
+            status: isHealthy ? 'up' : 'down',
+          },
+        });
+      },
     ]);
   }
 }

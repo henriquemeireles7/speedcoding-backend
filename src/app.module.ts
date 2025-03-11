@@ -14,6 +14,7 @@ import { AppThrottlerModule } from './throttler/throttler.module';
 import { LoggingInterceptor } from './logging/logging.interceptor';
 import { CacheInterceptor } from './cache/cache.interceptor';
 import { RedisModule } from './redis/redis.module';
+import { MetricsModule, MetricsInterceptor } from './metrics';
 
 /**
  * Main application module
@@ -32,6 +33,7 @@ import { RedisModule } from './redis/redis.module';
     CacheModule,
     LoggingModule,
     AppThrottlerModule,
+    MetricsModule,
 
     // Health checks
     HealthModule,
@@ -69,6 +71,10 @@ import { RedisModule } from './redis/redis.module';
     {
       provide: APP_INTERCEPTOR,
       useClass: CacheInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: MetricsInterceptor,
     },
   ],
 })

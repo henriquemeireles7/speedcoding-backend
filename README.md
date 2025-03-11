@@ -23,6 +23,10 @@ SpeedCoding is a platform that enables users to:
 - **Validation**: class-validator with detailed error messages
 - **Configuration**: Centralized environment validation with Joi
 - **Health Checks**: Terminus for application monitoring
+- **Metrics**: Prometheus for performance and business metrics
+- **Caching**: Redis for improved performance
+- **Rate Limiting**: Protection against abuse
+- **Logging**: Structured logging for better observability
 
 ## Database Schema
 
@@ -65,16 +69,63 @@ The database consists of the following models:
 - Relations: run (many-to-one)
 - Status enum: PENDING, APPROVED, REJECTED
 
-## Authentication System
+## Monitoring and Metrics
 
-The SpeedCoding backend uses JWT (JSON Web Tokens) for authentication. The authentication flow is as follows:
+The SpeedCoding backend includes comprehensive monitoring and metrics collection using Prometheus:
 
-1. User registers with email, username, and password
-2. User receives a verification email with a link to verify their email address
-3. User logs in with email and password, receiving JWT tokens
-4. Frontend stores the JWT token and includes it in the Authorization header for protected endpoints
-5. User can refresh their token using the refresh endpoint
-6. User can request password reset if they forget their password
+### Available Metrics
+
+- **HTTP Metrics**: Request counts, durations, sizes, and status codes
+- **Cache Metrics**: Cache hits, misses, and operation durations
+- **Rate Limiting Metrics**: Rate limit exceeded events
+- **Business Metrics**: Run durations, milestone completions, and active runs
+
+### Endpoints
+
+- `/metrics`: Exposes all Prometheus metrics
+- `/metrics/health`: Simple health check for the metrics service
+
+### Grafana Dashboards
+
+Sample Grafana dashboards are provided in the `dashboards` directory:
+
+- `api-performance.json`: Dashboard for monitoring API performance
+- `business-metrics.json`: Dashboard for monitoring business metrics
+
+### Integration
+
+To integrate with Prometheus and Grafana:
+
+1. Configure Prometheus to scrape the `/metrics` endpoint
+2. Import the provided dashboards into Grafana
+3. Configure Grafana to use your Prometheus instance as a data source
+
+## Caching System
+
+The application uses Redis for caching to improve performance:
+
+- **HTTP Response Caching**: Common responses are cached to reduce database load
+- **Distributed Caching**: Redis enables caching across multiple instances
+- **Cache Invalidation**: Automatic invalidation when data changes
+- **Custom Decorators**: `@Cacheable()` and `@CacheEvict()` for easy cache management
+
+## Rate Limiting
+
+The application includes rate limiting to protect against abuse:
+
+- **IP-based Limiting**: Prevents abuse from a single IP address
+- **User-based Limiting**: Prevents abuse from a single user
+- **Endpoint-specific Limits**: Different limits for different endpoints
+- **Redis Storage**: Distributed rate limiting across multiple instances
+
+## Logging
+
+The application includes structured logging for better observability:
+
+- **Request Logging**: All requests are logged with method, path, status, and duration
+- **Error Logging**: All errors are logged with stack traces
+- **Structured Format**: Logs are formatted as JSON for easier parsing
+- **Context-aware**: Logs include request IDs for tracing requests across services
 
 ## API Endpoints
 
