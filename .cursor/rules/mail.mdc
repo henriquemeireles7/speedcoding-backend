@@ -1,0 +1,12 @@
+---
+description: Guidelines for using Resend in the Mail project
+globs: /src/mail/**/*
+alwaysApply: false
+---
+- **Utilize the Resend API** for all email sending functionalities (e.g., via the `resend` client).
+- **Store email templates** in the `/templates` directory and load them dynamically in the code.
+- **Implement error handling** for Resend API calls to manage failures gracefully (e.g., try/catch blocks).
+- **Securely manage Resend API keys** using environment variables—never hardcode them.
+- **Adhere to email best practices** to ensure deliverability and avoid spam filters (e.g., clear subject lines, opt-out links).
+- **Include logging** for email sending operations to track successes and failures for debugging.
+

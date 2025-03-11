@@ -1,0 +1,21 @@
+---
+description: Coding guidelines for the Vibe Module in SpeedCode backen
+globs: src/vibes/**/*
+alwaysApply: false
+---
+
+
+# Vibe Module Project Rules
+
+- **Use Nest.js conventions** for controllers, services, and modules to maintain consistency with the backend.
+- **Write TypeScript** with strict typing for all Vibe-related code to ensure reliability and scalability.
+- **Define Vibe entities** in Prisma schema (e.g., `model Vibe`) with required fields: `id`, `name`, `description`.
+- **Link Milestones** to Vibes using Prisma relations (e.g., `milestones Milestone[]`) for structured challenges.
+- **Store setup guides** as markdown strings in the Vibe entity or a separate table for easy retrieval.
+- **Implement REST endpoints** (e.g., `GET /vibes`, `GET /vibes/{id}`) in the Vibe controller for UI/CLI access.
+- **Add Swagger annotations** (e.g., `@ApiProperty`) to document Vibe DTOs and endpoints for clarity in Swagger UI.
+- **Use environment variables** for Supabase Storage config (e.g., video URLs) to keep credentials secure.
+- **Validate Vibe data** with `class-validator` in DTOs (e.g., `@IsString()` for `name`) to enforce integrity.
+- **Include unit tests** for Vibe CRUD operations using Nest.js testing tools (e.g., `@nestjs/testing`).
+- **Log key actions** (e.g., Vibe creation, retrieval) with Nest.js logger for debugging and monitoring.
+- **Optimize database queries** with Prisma’s `include` (e.g., `include: { milestones: true }`) for efficient data fetching.

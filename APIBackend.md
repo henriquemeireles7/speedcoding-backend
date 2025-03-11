@@ -1,54 +1,58 @@
-Backend API Contract
 Purpose
-These API endpoints define how clients (CLI or frontend) interact with the Nest.js backend, providing functionality for authentication, managing runs, milestones, submissions, and retrieving leaderboards.
-
+These API endpoints define how clients (CLI or frontend) interact with the Nest.js backend, providing functionality for authentication, managing vibes, runs, milestones, submissions, and retrieving leaderboards.
 Authorization
 All protected endpoints require a JWT token in the Authorization header:
 Authorization: Bearer <token>
-
 1. Authentication
-POST /auth/register
-Description: Registers a new user.
-Request
-Body (JSON):
+POST /auth/register  
+Description: Registers a new user.  
+
+Request Body (JSON):  
 json
-Copy
+
 {
   "email": "user@example.com",
   "username": "alex123",
   "password": "MySecretPass"
 }
-Response (201 Created)
+
+Response (201 Created):  
 json
-Copy
+
 {
   "id": "uuid-of-new-user",
   "email": "user@example.com",
   "username": "alex123"
 }
-Errors: 400 (Invalid data), 409 (User already exists), etc.
-POST /auth/login
-Description: Authenticates a user and returns a JWT.
-Request
-Body (JSON):
+
+Errors: 400 (Invalid data), 409 (User already exists).
+
+POST /auth/login  
+Description: Authenticates a user and returns a JWT.  
+
+Request Body (JSON):  
 json
-Copy
+
 {
   "email": "user@example.com",
   "password": "MySecretPass"
 }
-Response (200 OK)
+
+Response (200 OK):  
 json
-Copy
+
 {
   "accessToken": "<jwt-token>"
 }
-Errors: 401 (Invalid credentials)
-GET /auth/profile (Protected)
-Description: Retrieves the authenticated user’s profile.
-Response (200 OK)
+
+Errors: 401 (Invalid credentials).
+
+GET /auth/profile (Protected)  
+Description: Retrieves the authenticated user’s profile.  
+
+Response (200 OK):  
 json
-Copy
+
 {
   "id": "uuid",
   "email": "user@example.com",
@@ -56,21 +60,69 @@ Copy
   "createdAt": "timestamp",
   "updatedAt": "timestamp"
 }
-Errors: 401 (Unauthorized)
-2. Runs
-POST /runs/start (Protected)
-Description: Starts a new run for a given vibe.
-Request
-Body (JSON):
+
+Errors: 401 (Unauthorized).
+
+2. Vibes
+GET /vibes  
+Description: Retrieves a list of all available Vibes (full-stack app challenges).  
+
+Query Parameters:  
+limit (optional, default 10): Number of Vibes to return.  
+
+offset (optional, default 0): Pagination offset.
+
+Response (200 OK):  
 json
-Copy
+
+[
+  {
+    "id": "uuid-of-vibe",
+    "name": "Slack Clone",
+    "description": "Build a real-time chat app with AI",
+    "milestoneCount": 7,
+    "setupGuide": "Run `npm init` and install dependencies"
+  },
+  ...
+]
+
+Notes: Public endpoint; no auth required to browse Vibes.
+
+GET /vibes/:vibeId  
+Description: Fetches details of a specific Vibe, including its milestones.  
+
+Response (200 OK):  
+json
+
+{
+  "id": "uuid-of-vibe",
+  "name": "Slack Clone",
+  "description": "Build a real-time chat app with AI",
+  "setupGuide": "Run `npm init` and install dependencies",
+  "milestones": [
+    { "index": 1, "name": "User Authentication", "description": "Implement login" },
+    { "index": 2, "name": "Channel Management", "description": "Add channels" },
+    ...
+  ]
+}
+
+Errors: 404 (Vibe not found).
+
+3. Runs
+POST /runs/start (Protected)  
+Description: Starts a new run for a given Vibe.  
+
+Request Body (JSON):  
+json
+
 {
   "vibeId": "uuid-of-vibe",
   "techStack": ["react", "nestjs"]
 }
-Response (201 Created)
+
+Response (201 Created):  
 json
-Copy
+
 {
   "id": "uuid-of-run",
   "userId": "uuid-of-user",
@@ -79,28 +131,36 @@ Copy
   "completed": false,
   "techStack": ["react", "nestjs"]
 }
-POST /runs/end (Protected)
-Description: Ends a run by setting the endTime and marking it completed.
-Request
-Body (JSON):
+
+Errors: 400 (Invalid vibeId), 401 (Unauthorized).
+
+POST /runs/end (Protected)  
+Description: Ends a run by setting the endTime and marking it completed.  
+
+Request Body (JSON):  
 json
-Copy
+
 {
   "runId": "uuid-of-run"
 }
-Response (200 OK)
+
+Response (200 OK):  
 json
-Copy
+
 {
   "id": "uuid-of-run",
   "completed": true,
   "totalTimeInSeconds": 3600
 }
-GET /runs/:runId (Protected)
-Description: Fetches details for a specific run.
-Response (200 OK)
+
+Errors: 400 (Invalid runId), 401 (Unauthorized).
+
+GET /runs/:runId (Protected)  
+Description: Fetches details for a specific run.  
+
+Response (200 OK):  
 json
-Copy
+
 {
   "id": "uuid-of-run",
   "startTime": "timestamp",
@@ -109,13 +169,16 @@ Copy
   "vibeId": "uuid-of-vibe",
   "techStack": ["react", "nestjs"],
   "userId": "uuid-of-user"
-  // etc.
 }
-GET /runs (Protected)
-Description: Lists all runs for the authenticated user (could be extended with admin privileges to list all).
-Response (200 OK)
+
+Errors: 404 (Run not found).
+
+GET /runs (Protected)  
+Description: Lists all runs for the authenticated user.  
+
+Response (200 OK):  
 json
-Copy
+
 [
   {
     "id": "uuid-of-run",
@@ -126,69 +189,85 @@ Copy
   },
   ...
 ]
-3. Milestones
-POST /verify/m{N} (Protected)
-Description: Verifies that the user has reached milestone N for a run.
-Example: /verify/m1, /verify/m2, … /verify/m7
-Request
-Body (JSON):
+
+Notes: Could extend with admin privileges to list all runs.
+
+4. Milestones
+POST /verify/m{N} (Protected)  
+Description: Verifies that the user has reached milestone N for a run (e.g., /verify/m1).  
+
+Request Body (JSON):  
 json
-Copy
+
 {
   "runId": "uuid-of-run"
 }
-Response (200 OK)
+
+Response (200 OK):  
 json
-Copy
+
 {
   "runId": "uuid-of-run",
   "milestoneIndex": 1,
   "verified": true,
   "timestamp": "2025-03-11T12:15:00.000Z"
 }
-Errors: 400 (Invalid run or milestone), 401/403 (Unauthorized)
-4. Submissions
-POST /submissions (Protected)
-Description: Creates or updates a submission (video proof) for a run.
-Request
-Body (JSON or multipart/form-data):
+
+Errors: 400 (Invalid run or milestone), 401 (Unauthorized).
+
+5. Submissions
+POST /submissions (Protected)  
+Description: Creates or updates a submission (video proof) for a run.  
+
+Request Body (multipart/form-data):  
 json
-Copy
+
 {
   "runId": "uuid-of-run",
   "videoUrl": "https://supabase.storage/video.mp4"
 }
-Response (201 Created)
+
+Response (201 Created):  
 json
-Copy
+
 {
   "id": "uuid-of-submission",
   "runId": "uuid-of-run",
   "videoUrl": "https://supabase.storage/video.mp4",
   "status": "pending"
 }
-Notes: Status set to "pending" until admin or automated test verification.
-Errors: 400 (Invalid data), 401 (Unauthorized)
-GET /submissions/:submissionId (Protected)
-Description: Fetches details of a single submission.
-Response (200 OK)
+
+Notes: Status set to "pending" until verified.  
+
+Errors: 400 (Invalid data), 401 (Unauthorized).
+
+GET /submissions/:submissionId (Protected)  
+Description: Fetches details of a single submission.  
+
+Response (200 OK):  
 json
-Copy
+
 {
   "id": "uuid-of-submission",
   "runId": "uuid-of-run",
   "videoUrl": "https://supabase.storage/video.mp4",
   "status": "approved"
 }
-5. Leaderboards
-GET /leaderboards
-Description: Retrieves a list of top runs, filtered by vibe and sorted by completion time (ascending).
-Query Parameters:
-vibeId (optional)
-limit (optional, default 10)
-Response (200 OK)
+
+Errors: 404 (Submission not found).
+
+6. Leaderboards
+GET /leaderboards  
+Description: Retrieves a list of top runs, filtered by Vibe and sorted by completion time (ascending).  
+
+Query Parameters:  
+vibeId (optional): Filter by specific Vibe.  
+
+limit (optional, default 10): Number of runs to return.
+
+Response (200 OK):  
 json
-Copy
+
 [
   {
     "runId": "uuid-of-run",
@@ -200,4 +279,6 @@ Copy
   },
   ...
 ]
-Notes: Only displays runs that are completed and have an approved submission.
+
+Notes: Only displays completed runs with approved submissions.
+

@@ -6,6 +6,7 @@ import { RunsModule } from './runs/runs.module';
 import { MilestonesModule } from './milestones/milestones.module';
 import { SubmissionsModule } from './submissions/submissions.module';
 import { LeaderboardsModule } from './leaderboards/leaderboards.module';
+import { VibesModule } from './vibes/vibes.module';
 import { PrismaService } from './prisma/prisma.service';
 import { ThrottlerModule } from '@nestjs/throttler';
 
@@ -26,6 +27,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     MilestonesModule,
     SubmissionsModule,
     LeaderboardsModule,
+    VibesModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],
