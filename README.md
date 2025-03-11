@@ -104,6 +104,12 @@ The SpeedCoding backend uses JWT (JSON Web Tokens) for authentication. The authe
 - `POST /verify/m7` - Verify milestone 7 for a run
 - `GET /verify/milestones/:runId` - Get all milestones for a run
 
+### Submissions
+
+- `POST /submissions` - Create or update a submission with video proof
+- `GET /submissions/:submissionId` - Get details for a specific submission
+- `GET /submissions` - List all submissions for the authenticated user
+
 ## Project Setup
 
 ```bash
