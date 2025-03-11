@@ -110,6 +110,13 @@ The SpeedCoding backend uses JWT (JSON Web Tokens) for authentication. The authe
 - `GET /submissions/:submissionId` - Get details for a specific submission
 - `GET /submissions` - List all submissions for the authenticated user
 
+### Leaderboards
+
+- `GET /leaderboards` - Get top runs sorted by completion time
+  - Query parameters:
+    - `vibeId` (optional) - Filter by vibe
+    - `limit` (optional, default 10) - Limit the number of results
+
 ## Project Setup
 
 ```bash
