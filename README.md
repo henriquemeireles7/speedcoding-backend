@@ -72,7 +72,9 @@ The SpeedCoding backend uses JWT (JSON Web Tokens) for authentication. The authe
 5. User can refresh their token using the refresh endpoint
 6. User can request password reset if they forget their password
 
-### API Endpoints
+## API Endpoints
+
+### Authentication
 
 - `POST /auth/register` - Register a new user
 - `POST /auth/login` - Login with email and password
@@ -83,6 +85,13 @@ The SpeedCoding backend uses JWT (JSON Web Tokens) for authentication. The authe
 - `POST /auth/request-password-reset` - Request password reset
 - `POST /auth/reset-password` - Reset password
 - `GET /auth/profile` - Get authenticated user profile
+
+### Runs
+
+- `POST /runs/start` - Start a new run with a specified vibe and tech stack
+- `POST /runs/end` - End a run and calculate total time
+- `GET /runs/:runId` - Get details for a specific run
+- `GET /runs` - List all runs for the authenticated user
 
 ## Project Setup
 
