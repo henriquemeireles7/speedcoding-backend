@@ -14,6 +14,18 @@ model User {
   passwordHash String   @db.VarChar(255) // Hashed password (e.g., bcrypt)
   createdAt   DateTime  @default(now())
   sessions    Session[] // One-to-many relation
+  refreshTokens RefreshToken[] // One-to-many relation for refresh tokens
+}
+
+// RefreshToken model for JWT refresh tokens
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique @db.VarChar(255)
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  isRevoked Boolean  @default(false)
 }
 
 // Session model for speedrun tracking
