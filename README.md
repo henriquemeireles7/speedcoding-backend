@@ -19,6 +19,10 @@ SpeedCoding is a platform that enables users to:
 - **ORM**: Prisma
 - **Authentication**: JWT with refresh tokens
 - **API**: RESTful endpoints
+- **Documentation**: Swagger/OpenAPI
+- **Validation**: class-validator with detailed error messages
+- **Configuration**: Centralized environment validation with Joi
+- **Health Checks**: Terminus for application monitoring
 
 ## Database Schema
 
@@ -125,6 +129,22 @@ The SpeedCoding backend uses JWT (JSON Web Tokens) for authentication. The authe
     - `offset` (optional, default 0) - Number of vibes to skip
 - `GET /vibes/:vibeId` - Get details for a specific vibe, including its milestones
 
+### Health
+
+- `GET /health` - Check the health of the application and its dependencies
+
+## API Documentation
+
+The API is documented using Swagger/OpenAPI. You can access the documentation at `/api/docs` when the server is running.
+
+## Error Handling
+
+The application uses global exception filters to ensure consistent error responses:
+
+- All responses follow a standard format with `statusCode`, `message`, `timestamp`, `path`, and `method`
+- Validation errors include detailed information about the invalid fields
+- HTTP exceptions are properly formatted and logged
+
 ## Project Setup
 
 ```bash
@@ -146,11 +166,23 @@ $ npm run start:dev
 The project requires the following environment variables:
 
 ```
+# Database
 DATABASE_URL=postgresql://user:password@localhost:5432/speedcode_db
+
+# JWT Authentication
 JWT_SECRET=your_jwt_secret_key
+JWT_EXPIRES_IN=1d
+
+# Email service (Resend)
 RESEND_API_KEY=your_resend_api_key
 FROM_EMAIL=noreply@speedcoding.app
+
+# Frontend URL for email links
 FRONTEND_URL=http://localhost:3000
+
+# Server configuration
+PORT=3001
+NODE_ENV=development
 ```
 
 ## Development
@@ -162,9 +194,6 @@ This project follows NestJS best practices with a modular architecture:
 - Guards protect authenticated routes
 - Prisma is used as the primary database interface
 - UUID is used for all IDs for better security and distribution
-
-## Project setup
-
-```bash
-$ npm install
-```
+- Global filters and interceptors ensure consistent responses
+- Configuration is validated at startup to prevent runtime errors
+- Health checks monitor the application and its dependencies
