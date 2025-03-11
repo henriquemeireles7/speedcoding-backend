@@ -1,0 +1,10 @@
+---
+description: Guidelines for Milestone Verification
+globs: src/milestones/**/*.{ts}
+alwaysApply: false
+---
+ - **Description**: Directs AI on milestone verification, emphasizing test logic and Prisma queries.
+   - **Content**: 
+     - Suggest mock tests for dev (e.g., `jest.mock`).
+     - Use `Prisma.MilestoneUpdateInput` for updates.
+     - Enforce milestone number range (1-7).

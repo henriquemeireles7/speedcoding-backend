@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL") // Supabase-provided URL
+}
+
+// User model for authentication
+model User {
+  id          Int       @id @default(autoincrement())
+  username    String    @unique @db.VarChar(50)
+  passwordHash String   @db.VarChar(255) // Hashed password (e.g., bcrypt)
+  createdAt   DateTime  @default(now())
+  sessions    Session[] // One-to-many relation
+}
+
+// Session model for speedrun tracking
+model Session {
+  id         Int          @id @default(autoincrement())
+  userId     Int
+  user       User         @relation(fields: [userId], references: [id])
+  techStack  String?      @db.VarChar(255) // e.g., "Node.js, Express"
+  startTime  DateTime     @default(now())
+  endTime    DateTime?
+  totalTime  String?      // Stored as text (e.g., "45m 12s"); Prisma doesn't support INTERVAL natively
+  milestones Milestone[] // One-to-many relation
+  submission Submission? // One-to-one relation
+}
+
+// Milestone model for individual milestone completions
+model Milestone {
+  id             Int      @id @default(autoincrement())
+  sessionId      Int
+  session        Session  @relation(fields: [sessionId], references: [id])
+  milestoneNumber Int     @db.SmallInt // 1 to 7
+  completedAt    DateTime
+  passed         Boolean  @default(false)
+}
+
+// Submission model for final run data
+model Submission {
+  id          Int      @id @default(autoincrement())
+  sessionId   Int      @unique
+  session     Session  @relation(fields: [sessionId], references: [id])
+  packages    String[] // Array of packages (e.g., ["express", "socket.io"])
+  videoUrl    String?  @db.VarChar(255) // Nullable if no recording
+  submittedAt DateTime @default(now())
+  status      Status   @default(PENDING)
+}
+
+// Enum for submission status
+enum Status {
+  PENDING
+  APPROVED
+  REJECTED
+}

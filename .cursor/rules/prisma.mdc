@@ -1,0 +1,10 @@
+---
+description: Guidelines for Prisma ORM
+globs: src/**/*.{ts}
+alwaysApply: false
+---
+   - **Description**: Sets rules for Prisma interactions across the project.
+   - **Content**: 
+     - Prefer `prisma.$transaction` for multi-table ops.
+     - Avoid raw SQL unless performance-critical.
+     - Suggest `include` for relations.

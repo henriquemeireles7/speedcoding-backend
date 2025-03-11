@@ -1,0 +1,9 @@
+---
+description: Guideline for Common Shared Utilities
+globs: src/common/**/*.{ts}
+alwaysApply: false
+---
+   - **Description**: Defines preferences for shared utilities (e.g., guards, interceptors).
+   - **Content**: 
+     - Suggest `JwtAuthGuard` for auth protection.
+     - Use `nestjs` built-in logging over `console.log`.

@@ -1,0 +1,10 @@
+---
+description: Guidelines for Auth Module
+globs: src/auth/**/*.{ts}
+alwaysApply: false
+---
+  - **Description**: Configures AI behavior for the `auth` module, focusing on JWT authentication and user management.
+   - **Content**: 
+     - Prefer `@nestjs/jwt` over custom token logic.
+     - Suggest `bcrypt` for password hashing in `AuthService`.
+     - Enforce DTOs like `LoginDto` with `class-validator`.

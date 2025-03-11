@@ -1,0 +1,153 @@
+To ensure your AI agent (presumably used with a tool like Cursor, an AI-powered code editor) follows best practices for Supabase, Prisma, Nest.js, and TypeScript in your SpeedCode backend, you’ll need to define project rules in a .cursorrules file. These rules guide the AI on coding style, framework conventions, and database interactions. Below, I’ll provide a .cursorrules file tailored to your project, followed by descriptions and globs for every .mcp (module configuration/preferences) file you might need.
+.cursorrules File for SpeedCode Backend
+File: .cursorrules
+markdown
+# SpeedCode Backend Project Rules
+These rules ensure the AI agent adheres to best practices for Supabase (PostgreSQL), Prisma, Nest.js, and TypeScript.
+
+## General Guidelines
+- **Language**: Use TypeScript exclusively for all source code.
+- **Style**: Follow Airbnb TypeScript style guide (camelCase variables, PascalCase classes, 2-space indentation).
+- **Error Handling**: Always use try-catch blocks for async operations; throw custom errors with meaningful messages.
+- **Type Safety**: Enforce strict typing; avoid `any` unless unavoidable (e.g., third-party library quirks).
+
+## Database (Supabase via Prisma)
+- **Prisma Usage**:
+  - Use Prisma Client for all database operations (`PrismaService` as a singleton).
+  - Prefer Prisma’s type-safe queries over raw SQL (e.g., `prisma.user.findUnique` instead of `prisma.$queryRaw`).
+  - Include relations explicitly with `include` (e.g., `include: { sessions: true }`).
+- **Schema Updates**: After modifying `schema.prisma`, run `npx prisma generate` and `npx prisma db push`.
+- **Transactions**: Use `prisma.$transaction` for operations spanning multiple tables (e.g., ending a session and creating a submission).
+- **Naming**: Match Prisma model names to API resources (e.g., `User` model → `/users` endpoint).
+
+## Nest.js Best Practices
+- **Modular Structure**:
+  - Organize code into modules (`auth`, `sessions`, `milestones`) under `src/`.
+  - Each module has a `.module.ts`, `.controller.ts`, and `.service.ts`.
+- **Controllers**:
+  - Use RESTful naming (e.g., `@Post('start')` for `/sessions/start`).
+  - Validate inputs with `@nestjs/class-validator` and DTOs (e.g., `CreateSessionDto`).
+- **Services**:
+  - Handle business logic in services, not controllers.
+  - Inject `PrismaService` for DB access (e.g., `@Injectable() class SessionsService`).
+- **Dependency Injection**: Use Nest.js DI for all dependencies (e.g., `@Inject()` for custom providers).
+- **Guards**: Apply `AuthGuard('jwt')` to protect endpoints requiring authentication.
+- **File Uploads**: Use `@nestjs/platform-express` `FileInterceptor` for video uploads in `/sessions/end`.
+
+## TypeScript Conventions
+- **Interfaces/Type Aliases**: Define DTOs and response types (e.g., `interface SessionResponse { sessionId: number }`).
+- **Enums**: Use TypeScript enums for fixed values (e.g., `enum Status { PENDING = 'PENDING', ... }` matches Prisma enum).
+- **Async/Await**: Use async/await for all promises; avoid `.then()` chains.
+- **Null Safety**: Use optional chaining (`?.`) and nullish coalescing (`??`) where applicable.
+
+## Specific Rules
+- **Authentication**: Use `@nestjs/jwt` for JWT generation and validation; store tokens in `User` context, not DB.
+- **Session Management**: Calculate `totalTime` in `SessionsService` using `dayjs` (e.g., `dayjs(endTime).diff(startTime)`).
+- **Milestone Verification**: Implement test logic in `MilestonesService` (e.g., mock tests for dev, real tests for prod).
+- **Video Handling**: Store videos in Supabase Storage; return public URLs in `videoUrl` (use `@supabase/supabase-js`).
+
+## Code Examples
+- **Controller**:
+  ```typescript
+  @Controller('sessions')
+  @UseGuards(AuthGuard('jwt'))
+  export class SessionsController {
+    constructor(private readonly sessionsService: SessionsService) {}
+
+    @Post('start')
+    async startSession(@Body() dto: CreateSessionDto): Promise<SessionResponse> {
+      return this.sessionsService.startSession(dto.techStack);
+    }
+  }
+  ```
+
+- **Service**:
+  ```typescript
+  @Injectable()
+  export class SessionsService {
+    constructor(private prisma: PrismaService) {}
+
+    async startSession(techStack: string): Promise<SessionResponse> {
+      const session = await this.prisma.session.create({
+        data: { techStack, userId: /* from JWT */ }
+      });
+      return { sessionId: session.id };
+    }
+  }
+  ```
+
+## Environment
+- Use `.env` for secrets (e.g., `DATABASE_URL`, `JWT_SECRET`); load with `@nestjs/config`.
+- Assume Supabase PostgreSQL for production; local Docker for dev.
+
+**Last Updated**: March 10, 2025
+
+#### Explanation
+- **Supabase/Prisma**: Ensures Prisma is the sole DB interface, leveraging Supabase’s PostgreSQL and Storage.
+- **Nest.js**: Enforces modularity, DI, and RESTful design, common in Nest.js best practices.
+- **TypeScript**: Promotes type safety and modern syntax for maintainability.
+- **Specifics**: Tailors rules to your SpeedCode backend (JWT auth, session timing, video uploads).
+
+---
+
+### `.mcp` Files: Description and Glob
+
+`.mcp` files (assumed to be “Module Configuration/Preferences” files, a hypothetical convention for Cursor or similar tools) define specific settings or preferences for different parts of your project. Here’s what you might need, with descriptions and globs:
+
+1. **File: `.auth.mcp`**
+   - **Description**: Configures AI behavior for the `auth` module, focusing on JWT authentication and user management.
+   - **Content**: 
+     - Prefer `@nestjs/jwt` over custom token logic.
+     - Suggest `bcrypt` for password hashing in `AuthService`.
+     - Enforce DTOs like `LoginDto` with `class-validator`.
+   - **Glob**: `src/auth/**/*.{ts}`
+     - Applies to all TypeScript files in `src/auth/`.
+
+2. **File: `.sessions.mcp`**
+   - **Description**: Guides AI on session-related logic, including starting/ending sessions and handling multipart uploads.
+   - **Content**: 
+     - Use `FileInterceptor` for video uploads.
+     - Calculate `totalTime` with `dayjs`.
+     - Suggest `Prisma.SessionCreateInput` for session creation.
+   - **Glob**: `src/sessions/**/*.{ts}`
+     - Covers all files in `src/sessions/`.
+
+3. **File: `.milestones.mcp`**
+   - **Description**: Directs AI on milestone verification, emphasizing test logic and Prisma queries.
+   - **Content**: 
+     - Suggest mock tests for dev (e.g., `jest.mock`).
+     - Use `Prisma.MilestoneUpdateInput` for updates.
+     - Enforce milestone number range (1-7).
+   - **Glob**: `src/milestones/**/*.{ts}`
+     - Targets all files in `src/milestones/`.
+
+4. **File: `.prisma.mcp`**
+   - **Description**: Sets rules for Prisma interactions across the project.
+   - **Content**: 
+     - Prefer `prisma.$transaction` for multi-table ops.
+     - Avoid raw SQL unless performance-critical.
+     - Suggest `include` for relations.
+   - **Glob**: `src/**/*.{ts}`
+     - Applies globally where Prisma is used (e.g., services).
+
+5. **File: `.common.mcp`**
+   - **Description**: Defines preferences for shared utilities (e.g., guards, interceptors).
+   - **Content**: 
+     - Suggest `JwtAuthGuard` for auth protection.
+     - Use `nestjs` built-in logging over `console.log`.
+   - **Glob**: `src/common/**/*.{ts}`
+     - Covers all files in `src/common/`.
+
+#### Example `.mcp` File (`.auth.mcp`)
+```markdown
+# Authentication Module Preferences
+- Use @nestjs/jwt for token generation.
+- Hash passwords with bcrypt in AuthService.
+- Define LoginDto with @IsString() and @MinLength(4).
+Notes
+Glob: Specifies where the .mcp rules apply using file patterns.
+Flexibility: .mcp files are optional; if Cursor doesn’t use them, treat them as documentation or adapt to its config system.
+Summary
+.cursorrules: Enforces best practices for Supabase, Prisma, Nest.js, and TypeScript, guiding your AI agent globally.
+.mcp Files: Provide module-specific preferences for auth, sessions, milestones, prisma, and common, with globs targeting relevant directories.
+Let me know if you need these implemented in a different format or further details on integrating with Cursor!

@@ -1,0 +1,10 @@
+---
+description: Guidelines for sessions Modules
+globs: src/sessions/**/*.{ts}
+alwaysApply: false
+---
+   - **Description**: Guides AI on session-related logic, including starting/ending sessions and handling multipart uploads.
+   - **Content**: 
+        - Use `FileInterceptor` for video uploads.
+     - Calculate `totalTime` with `dayjs`.
+     - Suggest `Prisma.SessionCreateInput` for session creation.
