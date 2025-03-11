@@ -1,74 +1,57 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe, BadRequestException } from '@nestjs/common';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import {
-  HttpExceptionFilter,
-  AllExceptionsFilter,
-  TransformInterceptor,
-} from './common';
+import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { LoggingService } from './logging/logging.service';
 
+/**
+ * Bootstrap the application
+ */
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // Create the application
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+  });
 
-  // Set global prefix for all routes
+  // Get configuration service
+  const configService = app.get(ConfigService);
+  const port = configService.get<number>('PORT', 3000);
+
+  // Set up custom logger
+  const logger = app.get(LoggingService);
+  logger.setContext('Bootstrap');
+  app.useLogger(logger);
+
+  // Set up global prefix
   app.setGlobalPrefix('api');
 
-  // Enable CORS
-  app.enableCors();
-
-  // Apply global filters and interceptors
-  app.useGlobalFilters(new AllExceptionsFilter(), new HttpExceptionFilter());
-  app.useGlobalInterceptors(new TransformInterceptor());
-
-  // Enable validation with detailed error messages
+  // Set up validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // Strip properties not in DTO
-      forbidNonWhitelisted: true, // Throw error if non-whitelisted properties are present
-      transform: true, // Transform payloads to DTO instances
-      transformOptions: {
-        enableImplicitConversion: true, // Allow implicit conversion of primitive types
-      },
-      exceptionFactory: (errors) => {
-        const result = errors.map((error) => ({
-          property: error.property,
-          message: error.constraints
-            ? Object.values(error.constraints)[0]
-            : 'Validation failed',
-        }));
-        return new BadRequestException(result);
-      },
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
     }),
   );
 
-  // Configure Swagger
-  const config = new DocumentBuilder()
+  // Set up CORS
+  app.enableCors();
+
+  // Set up Swagger documentation
+  const swaggerConfig = new DocumentBuilder()
     .setTitle('SpeedCoding API')
-    .setDescription('API documentation for the SpeedCoding platform')
+    .setDescription('API for the SpeedCoding platform')
     .setVersion('1.0')
-    .addTag('auth', 'Authentication endpoints')
-    .addTag('runs', 'Run management endpoints')
-    .addTag('verify', 'Milestone verification endpoints')
-    .addTag('submissions', 'Submission management endpoints')
-    .addTag('leaderboards', 'Leaderboard endpoints')
-    .addTag('vibes', 'Vibe management endpoints')
-    .addBearerAuth(
-      {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-        name: 'JWT',
-        description: 'Enter JWT token',
-        in: 'header',
-      },
-      'JWT-auth', // This is a key to be used in @ApiBearerAuth() decorator
-    )
+    .addBearerAuth()
     .build();
 
-  const document = SwaggerModule.createDocument(app, config);
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document);
 
-  await app.listen(process.env.PORT ?? 3000);
+  // Start the application
+  await app.listen(port);
+  logger.log(`Application is running on: http://localhost:${port}/api`);
 }
+
 bootstrap();

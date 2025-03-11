@@ -25,6 +25,13 @@ import * as Joi from 'joi';
         // Frontend URL for email links
         FRONTEND_URL: Joi.string().uri().required(),
 
+        // Redis (for caching and rate limiting)
+        REDIS_URL: Joi.string().when('NODE_ENV', {
+          is: 'production',
+          then: Joi.required(),
+          otherwise: Joi.optional(),
+        }),
+
         // Server configuration
         PORT: Joi.number().default(3000),
         NODE_ENV: Joi.string()
