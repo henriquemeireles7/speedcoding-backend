@@ -19,11 +19,12 @@ import { RedisModule, RedisService } from '../redis';
         configService: ConfigService,
         redisService: RedisService,
       ) => {
-        const isProduction = configService.get('NODE_ENV') === 'production';
+        const isProduction =
+          configService.get<string>('NODE_ENV') === 'production';
 
         // Use Redis in production, memory store in development
         if (isProduction && redisService.isClientAvailable()) {
-          const redisUrl = configService.get('REDIS_URL');
+          const redisUrl = configService.get<string>('REDIS_URL');
           if (!redisUrl) {
             throw new Error('REDIS_URL is required in production environment');
           }

@@ -25,7 +25,11 @@ export const CACHE_EVICT_PATTERNS_KEY = 'cache:evict:patterns';
  * @param ttl Time to live in milliseconds
  */
 export const Cacheable = (ttl?: number) => {
-  return (target: any, key: string, descriptor: PropertyDescriptor) => {
+  return (
+    target: object,
+    key: string,
+    descriptor: PropertyDescriptor,
+  ): PropertyDescriptor => {
     SetMetadata(CACHE_ENABLED_KEY, true)(target, key, descriptor);
     if (ttl) {
       SetMetadata(CACHE_TTL_KEY, ttl)(target, key, descriptor);
@@ -40,7 +44,11 @@ export const Cacheable = (ttl?: number) => {
  */
 export const CacheEvict = (patterns: string | string[]) => {
   const patternArray = Array.isArray(patterns) ? patterns : [patterns];
-  return (target: any, key: string, descriptor: PropertyDescriptor) => {
+  return (
+    target: object,
+    key: string,
+    descriptor: PropertyDescriptor,
+  ): PropertyDescriptor => {
     SetMetadata(CACHE_EVICT_KEY, true)(target, key, descriptor);
     SetMetadata(CACHE_EVICT_PATTERNS_KEY, patternArray)(
       target,

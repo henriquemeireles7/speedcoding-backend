@@ -77,7 +77,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         url: redisUrl,
       });
 
-      this.client.on('error', (err) => {
+      this.client.on('error', (err: Error) => {
         this.logger.error(`Redis client error: ${err.message}`, err.stack);
       });
 
@@ -91,10 +91,11 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
       await this.client.connect();
       return this.client;
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as Error;
       this.logger.error(
-        `Failed to connect to Redis: ${error.message}`,
-        error.stack,
+        `Failed to connect to Redis: ${err.message}`,
+        err.stack,
       );
       throw error;
     }

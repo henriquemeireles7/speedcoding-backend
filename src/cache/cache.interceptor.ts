@@ -8,6 +8,7 @@ import {
 import { Observable, of } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { CacheService } from './cache.service';
+import { Request, Response } from 'express';
 
 /**
  * Interceptor for automatic caching of GET endpoints
@@ -23,9 +24,9 @@ export class CacheInterceptor implements NestInterceptor {
   async intercept(
     context: ExecutionContext,
     next: CallHandler,
-  ): Promise<Observable<any>> {
-    const request = context.switchToHttp().getRequest();
-    const response = context.switchToHttp().getResponse();
+  ): Promise<Observable<unknown>> {
+    const request = context.switchToHttp().getRequest<Request>();
+    const response = context.switchToHttp().getResponse<Response>();
 
     // Only cache GET requests
     if (request.method !== 'GET') {
@@ -54,7 +55,7 @@ export class CacheInterceptor implements NestInterceptor {
     response.setHeader('X-Cache', 'MISS');
 
     return next.handle().pipe(
-      tap(async (data) => {
+      tap(async (data: unknown) => {
         // Get TTL from metadata or use default
         const ttl = this.getTTL(context) || this.defaultTTL;
 
