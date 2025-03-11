@@ -17,7 +17,7 @@ SpeedCoding is a platform that enables users to:
 - **Framework**: NestJS (Node.js)
 - **Database**: PostgreSQL via Supabase
 - **ORM**: Prisma
-- **Authentication**: JWT with refresh tokens
+- **Authentication**: JWT with refresh tokens and OAuth2 (Google, GitHub)
 - **API**: RESTful endpoints
 - **Documentation**: Swagger/OpenAPI
 - **Validation**: class-validator with detailed error messages
@@ -36,13 +36,19 @@ The database consists of the following models:
 ### User
 
 - Stores user authentication information
-- Fields: id (UUID), username, email, passwordHash, isEmailVerified, displayName, bio, avatarUrl, preferences (JSON), createdAt, updatedAt
-- Relations: runs (one-to-many), refreshTokens (one-to-many)
+- Fields: id (UUID), username, email, passwordHash, isEmailVerified, displayName, bio, avatarUrl, preferences (JSON), location, website, socialLinks (JSON), skills (JSON), createdAt, updatedAt
+- Relations: runs (one-to-many), refreshTokens (one-to-many), socialConnections (one-to-many)
 
 ### RefreshToken
 
 - Stores JWT refresh tokens for extended sessions
 - Fields: id (UUID), token, userId, expiresAt, isRevoked, createdAt, updatedAt
+- Relations: user (many-to-one)
+
+### SocialConnection
+
+- Stores OAuth connections for social login
+- Fields: id (UUID), userId, provider, providerId, createdAt, updatedAt
 - Relations: user (many-to-one)
 
 ### Vibe
@@ -194,6 +200,10 @@ The application includes structured logging for better observability:
 - `POST /auth/request-password-reset` - Request password reset
 - `POST /auth/reset-password` - Reset password
 - `GET /auth/profile` - Get authenticated user profile
+- `GET /auth/google` - Authenticate with Google
+- `GET /auth/google/callback` - Google OAuth callback
+- `GET /auth/github` - Authenticate with GitHub
+- `GET /auth/github/callback` - GitHub OAuth callback
 
 ### Users
 
@@ -314,6 +324,24 @@ REDIS_DB=0
 
 # Sentry
 SENTRY_DSN=https://your-sentry-dsn@sentry.io/project-id
+
+# Email service (Resend)
+RESEND_API_KEY=your-resend-api-key
+FROM_EMAIL=noreply@speedcoding.ai
+
+# Frontend URL for email links and OAuth callbacks
+FRONTEND_URL=http://localhost:3000
+
+# OAuth Configuration
+# Google OAuth
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_CALLBACK_URL=http://localhost:3000/api/auth/google/callback
+
+# GitHub OAuth
+GITHUB_CLIENT_ID=your-github-client-id
+GITHUB_CLIENT_SECRET=your-github-client-secret
+GITHUB_CALLBACK_URL=http://localhost:3000/api/auth/github/callback
 
 # Supabase Storage
 SUPABASE_URL=https://your-supabase-project.supabase.co

@@ -7,6 +7,7 @@ import {
   UseGuards,
   Get,
   Req,
+  Res,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import {
@@ -21,14 +22,17 @@ import {
 } from './dto';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { Request } from 'express';
+import { AuthGuard } from '@nestjs/passport';
+import { Request, Response } from 'express';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiExcludeEndpoint,
 } from '@nestjs/swagger';
 import { UserResponseDto } from '../users/dto/user-response.dto';
+import { ConfigService } from '@nestjs/config';
 
 /**
  * Authentication Controller
@@ -38,7 +42,10 @@ import { UserResponseDto } from '../users/dto/user-response.dto';
 @Controller('auth')
 @UseGuards(ThrottlerGuard)
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private configService: ConfigService,
+  ) {}
 
   /**
    * Register a new user
@@ -193,5 +200,67 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async getProfile(@Req() req: Request & { user: { sub: string } }) {
     return await this.authService.getProfile(req.user.sub);
+  }
+
+  /**
+   * Initiate Google OAuth2 authentication
+   */
+  @Get('google')
+  @UseGuards(AuthGuard('google'))
+  @ApiOperation({ summary: 'Authenticate with Google' })
+  @ApiResponse({ status: 302, description: 'Redirect to Google login' })
+  googleAuth() {
+    // This method is empty because the guard handles the authentication
+    // The guard will redirect to Google's login page
+  }
+
+  /**
+   * Google OAuth2 callback
+   * @param req Request object
+   * @param res Response object
+   */
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  @ApiExcludeEndpoint() // Exclude from Swagger docs
+  googleAuthCallback(@Req() req: Request, @Res() res: Response) {
+    // The user data is attached to the request by the AuthGuard
+    const tokens = req.user as TokensDto;
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+
+    // Redirect to frontend with tokens
+    return res.redirect(
+      `${frontendUrl}/auth/social-callback?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`,
+    );
+  }
+
+  /**
+   * Initiate GitHub OAuth authentication
+   */
+  @Get('github')
+  @UseGuards(AuthGuard('github'))
+  @ApiOperation({ summary: 'Authenticate with GitHub' })
+  @ApiResponse({ status: 302, description: 'Redirect to GitHub login' })
+  githubAuth() {
+    // This method is empty because the guard handles the authentication
+    // The guard will redirect to GitHub's login page
+  }
+
+  /**
+   * GitHub OAuth callback
+   * @param req Request object
+   * @param res Response object
+   */
+  @Get('github/callback')
+  @UseGuards(AuthGuard('github'))
+  @ApiExcludeEndpoint() // Exclude from Swagger docs
+  githubAuthCallback(@Req() req: Request, @Res() res: Response) {
+    // The user data is attached to the request by the AuthGuard
+    const tokens = req.user as TokensDto;
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+
+    // Redirect to frontend with tokens
+    return res.redirect(
+      `${frontendUrl}/auth/social-callback?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`,
+    );
   }
 }

@@ -18,6 +18,7 @@ import {
   RequestPasswordResetDto,
   ResetPasswordDto,
 } from './dto';
+import { SocialUserDto } from './dto/social-user.dto';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { Prisma } from '@prisma/client';
@@ -394,5 +395,145 @@ export class AuthService {
   async getProfile(userId: string) {
     const user = await this.usersService.findById(userId);
     return this.usersService.mapToDto(user);
+  }
+
+  /**
+   * Handle social login (Google, GitHub)
+   * @param socialUser User data from OAuth provider
+   * @returns Access and refresh tokens
+   */
+  async socialLogin(socialUser: SocialUserDto): Promise<TokensDto> {
+    const { email, provider, providerId, firstName, lastName, picture, username } = socialUser;
+
+    // Check if user exists by provider and providerId
+    let user = await this.prisma.user.findFirst({
+      where: {
+        socialConnections: {
+          some: {
+            provider,
+            providerId,
+          },
+        },
+      },
+    });
+
+    // If user doesn't exist, check by email
+    if (!user) {
+      user = await this.prisma.user.findUnique({
+        where: { email },
+      });
+    }
+
+    // Generate a display name from first and last name
+    const displayName = [firstName, lastName].filter(Boolean).join(' ');
+
+    // Generate a username if not provided
+    const generatedUsername = username || this.generateUsername(email, firstName, lastName);
+
+    if (user) {
+      // User exists, update social connection if needed
+      const existingConnection = await this.prisma.socialConnection.findFirst({
+        where: {
+          userId: user.id,
+          provider,
+          providerId,
+        },
+      });
+
+      if (!existingConnection) {
+        // Add new social connection
+        await this.prisma.socialConnection.create({
+          data: {
+            provider,
+            providerId,
+            userId: user.id,
+          },
+        });
+      }
+
+      // Update user profile with social data if needed
+      if (!user.avatarUrl && picture) {
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            avatarUrl: picture,
+            displayName: user.displayName || displayName,
+          },
+        });
+      }
+    } else {
+      // Create new user with social data
+      // Generate a random password for the user
+      const randomPassword = uuidv4();
+      const passwordHash = await bcrypt.hash(randomPassword, 10);
+
+      // Create user and social connection in a transaction
+      const result = await this.prisma.$transaction(async (prisma) => {
+        // Check if username is already taken
+        const existingUserByUsername = await prisma.user.findUnique({
+          where: { username: generatedUsername },
+        });
+
+        // If username is taken, append a random string
+        const finalUsername = existingUserByUsername
+          ? `${generatedUsername}-${Math.random().toString(36).substring(2, 8)}`
+          : generatedUsername;
+
+        // Create user
+        const newUser = await prisma.user.create({
+          data: {
+            email,
+            username: finalUsername,
+            passwordHash,
+            isEmailVerified: true, // Social login users are considered verified
+            displayName: displayName || finalUsername,
+            avatarUrl: picture,
+          },
+        });
+
+        // Create social connection
+        await prisma.socialConnection.create({
+          data: {
+            provider,
+            providerId,
+            userId: newUser.id,
+          },
+        });
+
+        return newUser;
+      });
+
+      user = result;
+    }
+
+    // Generate tokens
+    const tokens = this.generateTokens(user.id, user.username, user.email);
+
+    // Store refresh token
+    await this.prisma.$transaction(async (prisma) => {
+      await this.storeRefreshToken(prisma, tokens.refreshToken, user.id);
+    });
+
+    return tokens;
+  }
+
+  /**
+   * Generate a username from email or name
+   * @param email User email
+   * @param firstName User first name
+   * @param lastName User last name
+   * @returns Generated username
+   */
+  private generateUsername(email: string, firstName?: string, lastName?: string): string {
+    if (firstName && lastName) {
+      // Use first name and last name initial
+      return `${firstName.toLowerCase()}${lastName.charAt(0).toLowerCase()}`;
+    } else if (firstName) {
+      // Use first name
+      return firstName.toLowerCase();
+    } else {
+      // Use email prefix
+      return email.split('@')[0];
+    }
   }
 }

@@ -18,8 +18,17 @@ model User {
   verificationTokenExpiry DateTime?
   resetToken            String?   @db.VarChar(255)
   resetTokenExpiry      DateTime?
+  displayName           String?   @db.VarChar(100)
+  bio                   String?   @db.Text
+  avatarUrl             String?   @db.VarChar(255)
+  preferences           Json?     // Stored as JSON
+  location              String?   @db.VarChar(100)
+  website               String?   @db.VarChar(255)
+  socialLinks           Json?     // Stored as JSON array of social media links
+  skills                Json?     // Stored as JSON array of skills
   runs                  Run[]     // One-to-many relation
   refreshTokens         RefreshToken[] // One-to-many relation for refresh tokens
+  socialConnections     SocialConnection[] // One-to-many relation for social logins
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 }
@@ -33,6 +42,19 @@ model RefreshToken {
   expiresAt DateTime
   isRevoked Boolean   @default(false)
   createdAt DateTime  @default(now())
+}
+
+// SocialConnection model for OAuth connections
+model SocialConnection {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @db.Uuid
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider    String    @db.VarChar(50) // e.g., 'google', 'github'
+  providerId  String    @db.VarChar(255) // ID from the provider
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([provider, providerId]) // Ensure unique provider+providerId combination
 }
 
 // Vibe model for categorizing runs
