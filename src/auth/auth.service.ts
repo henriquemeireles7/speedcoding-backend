@@ -84,7 +84,7 @@ export class AuthService {
       });
 
       // Generate tokens
-      const tokens = this.generateTokens(user.id, user.username);
+      const tokens = this.generateTokens(user.id, user.username, user.email);
 
       // Create refresh token in database
       await this.storeRefreshToken(prisma, tokens.refreshToken, user.id);
@@ -252,16 +252,16 @@ export class AuthService {
   }
 
   /**
-   * Authenticate a user and generate tokens
+   * Login a user
    * @param loginDto Login credentials
    * @returns Access and refresh tokens
    */
   async login(loginDto: LoginDto): Promise<TokensDto> {
-    const { username, password } = loginDto;
+    const { email, password } = loginDto;
 
-    // Find the user by username
+    // Find the user by email
     const user = await this.prisma.user.findUnique({
-      where: { username },
+      where: { email },
     });
 
     // If user doesn't exist or password doesn't match, throw an error
@@ -276,7 +276,7 @@ export class AuthService {
     }
 
     // Generate tokens
-    const tokens = this.generateTokens(user.id, user.username);
+    const tokens = this.generateTokens(user.id, user.username, user.email);
 
     // Store refresh token in database
     await this.storeRefreshToken(this.prisma, tokens.refreshToken, user.id);
@@ -311,6 +311,7 @@ export class AuthService {
     const tokens = this.generateTokens(
       storedToken.user.id,
       storedToken.user.username,
+      storedToken.user.email,
     );
 
     // Revoke the old token and store the new one in a transaction
@@ -344,22 +345,21 @@ export class AuthService {
   }
 
   /**
-   * Generate access and refresh tokens for a user
+   * Generate JWT tokens for a user
    * @param userId User ID
    * @param username Username
+   * @param email User email
    * @returns Access and refresh tokens
    */
-  private generateTokens(userId: number, username: string): TokensDto {
-    const payload = {
-      sub: userId,
-      username,
-    };
+  private generateTokens(
+    userId: string,
+    username: string,
+    email: string,
+  ): TokensDto {
+    const payload = { sub: userId, username, email };
 
-    // Generate access token (short-lived)
     const accessToken = this.jwtService.sign(payload);
-
-    // Generate refresh token (long-lived, random UUID)
-    const refreshToken = uuidv4();
+    const refreshToken = uuidv4(); // Use UUID for refresh token
 
     return {
       accessToken,
@@ -369,14 +369,14 @@ export class AuthService {
 
   /**
    * Store a refresh token in the database
-   * @param prisma Prisma client (for transactions)
+   * @param prisma Prisma client
    * @param refreshToken Refresh token
    * @param userId User ID
    */
   private async storeRefreshToken(
     prisma: Prisma.TransactionClient,
     refreshToken: string,
-    userId: number,
+    userId: string,
   ): Promise<void> {
     // Set expiration date (30 days from now)
     const expiresAt = addDays(new Date(), 30);
