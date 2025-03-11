@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { LoggingService } from './logging/logging.service';
+import { SentryService } from './sentry/sentry.service';
 
 /**
  * Bootstrap the application
@@ -48,6 +49,27 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document);
+
+  // Get Sentry service
+  const sentryService = app.get(SentryService);
+
+  // Handle shutdown signals
+  const signals = ['SIGTERM', 'SIGINT', 'SIGHUP'] as const;
+  signals.forEach((signal) => {
+    process.on(signal, async () => {
+      logger.log(`Received ${signal} signal, shutting down gracefully...`);
+
+      // Close Sentry before shutdown
+      await sentryService.close(2000).catch((err) => {
+        logger.error('Error closing Sentry', err);
+      });
+
+      // Close the application
+      await app.close();
+      logger.log('Application shut down successfully');
+      process.exit(0);
+    });
+  });
 
   // Start the application
   await app.listen(port);

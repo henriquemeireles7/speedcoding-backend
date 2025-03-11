@@ -15,6 +15,7 @@ import { LoggingInterceptor } from './logging/logging.interceptor';
 import { CacheInterceptor } from './cache/cache.interceptor';
 import { RedisModule } from './redis/redis.module';
 import { MetricsModule, MetricsInterceptor } from './metrics';
+import { SentryModule, SentryExceptionFilter } from './sentry';
 
 /**
  * Main application module
@@ -34,6 +35,7 @@ import { MetricsModule, MetricsInterceptor } from './metrics';
     LoggingModule,
     AppThrottlerModule,
     MetricsModule,
+    SentryModule,
 
     // Health checks
     HealthModule,
@@ -51,6 +53,10 @@ import { MetricsModule, MetricsInterceptor } from './metrics';
   providers: [
     AppService,
     // Global exception filters
+    {
+      provide: APP_FILTER,
+      useClass: SentryExceptionFilter,
+    },
     {
       provide: APP_FILTER,
       useClass: AllExceptionsFilter,

@@ -27,6 +27,7 @@ SpeedCoding is a platform that enables users to:
 - **Caching**: Redis for improved performance
 - **Rate Limiting**: Protection against abuse
 - **Logging**: Structured logging for better observability
+- **Error Tracking**: Sentry for real-time error monitoring and debugging
 
 ## Database Schema
 
@@ -91,6 +92,7 @@ Sample Grafana dashboards are provided in the `dashboards` directory:
 
 - `api-performance.json`: Dashboard for monitoring API performance
 - `business-metrics.json`: Dashboard for monitoring business metrics
+- `sentry-overview.json`: Dashboard for monitoring Sentry errors and transactions
 
 ### Integration
 
@@ -99,6 +101,49 @@ To integrate with Prometheus and Grafana:
 1. Configure Prometheus to scrape the `/metrics` endpoint
 2. Import the provided dashboards into Grafana
 3. Configure Grafana to use your Prometheus instance as a data source
+
+## Error Tracking and Observability
+
+The SpeedCoding backend includes comprehensive error tracking and observability using Sentry:
+
+### Features
+
+- **Real-time Error Tracking**: Automatically captures and reports errors to Sentry
+- **Performance Monitoring**: Tracks transaction performance and identifies bottlenecks
+- **User Context**: Associates errors with user information for better debugging
+- **Breadcrumbs**: Records application events leading up to errors
+- **Custom Tags**: Adds metadata to errors for better filtering and analysis
+- **Sanitization**: Automatically redacts sensitive information from error reports
+
+### Integration
+
+The Sentry integration is configured in the `SentryModule` and requires the following environment variables:
+
+```
+SENTRY_DSN=https://your-sentry-dsn@sentry.io/project-id
+NODE_ENV=development|production
+APP_VERSION=1.0.0
+```
+
+### Sentry Dashboard
+
+The Sentry dashboard provides:
+
+- Real-time error tracking and notifications
+- Performance monitoring and transaction analysis
+- User impact analysis
+- Release tracking
+- Issue assignment and resolution workflow
+
+### Best Practices
+
+1. **Capture Meaningful Errors**: Only capture errors that are actionable and provide context
+2. **Add User Context**: Always associate errors with user information when available
+3. **Use Tags for Filtering**: Add tags to errors for better filtering and analysis
+4. **Add Breadcrumbs**: Record important events leading up to errors
+5. **Sanitize Sensitive Data**: Never send sensitive information to Sentry
+6. **Monitor Performance**: Use transactions and spans to identify bottlenecks
+7. **Set Up Alerts**: Configure Sentry alerts for critical errors
 
 ## Caching System
 
@@ -234,6 +279,16 @@ FRONTEND_URL=http://localhost:3000
 # Server configuration
 PORT=3001
 NODE_ENV=development
+APP_VERSION=1.0.0
+
+# Redis configuration
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_DB=0
+
+# Sentry configuration
+SENTRY_DSN=https://your-sentry-dsn@sentry.io/project-id
 ```
 
 ## Development
