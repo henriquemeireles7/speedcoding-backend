@@ -63,53 +63,26 @@ The database consists of the following models:
 
 ## Authentication System
 
-The authentication system implements:
+The SpeedCoding backend uses JWT (JSON Web Tokens) for authentication. The authentication flow is as follows:
 
-1. **User Registration**: Create new accounts with username/password
-2. **Login**: Authenticate users and issue JWT tokens
-3. **Refresh Tokens**: Allow extended sessions without re-authentication
-4. **Logout**: Revoke refresh tokens
-5. **Rate Limiting**: Prevent brute force attacks
-6. **Email Verification**: Verify user email addresses
-7. **Password Reset**: Allow users to reset forgotten passwords
+1. User registers with email, username, and password
+2. User receives a verification email with a link to verify their email address
+3. User logs in with email and password, receiving JWT tokens
+4. Frontend stores the JWT token and includes it in the Authorization header for protected endpoints
+5. User can refresh their token using the refresh endpoint
+6. User can request password reset if they forget their password
 
-### Security Features
+### API Endpoints
 
-- Password hashing with bcrypt
-- JWT token-based authentication
-- Refresh token rotation for enhanced security
-- Rate limiting on sensitive endpoints
-- Email verification for new accounts
-
-## API Endpoints
-
-### Authentication
-
-- `POST /api/v1/auth/register` - Register a new user
-- `POST /api/v1/auth/login` - Authenticate and receive tokens
-- `POST /api/v1/auth/refresh` - Refresh access token
-- `POST /api/v1/auth/logout` - Revoke refresh token
-- `POST /api/v1/auth/verify-email` - Verify email address
-- `POST /api/v1/auth/resend-verification` - Resend verification email
-- `POST /api/v1/auth/request-password-reset` - Request password reset
-- `POST /api/v1/auth/reset-password` - Reset password
-
-### Runs
-
-- `POST /api/v1/runs/start` - Start a new coding run
-- `POST /api/v1/runs/end` - End a run and submit results
-- `GET /api/v1/runs` - Get all runs for the authenticated user
-- `GET /api/v1/runs/:id` - Get a specific run
-
-### Milestones
-
-- `POST /api/v1/milestones/verify` - Verify milestone completion
-- `GET /api/v1/milestones/:runId` - Get all milestones for a run
-
-### Vibes
-
-- `GET /api/v1/vibes` - Get all available vibes
-- `GET /api/v1/vibes/:id` - Get a specific vibe
+- `POST /auth/register` - Register a new user
+- `POST /auth/login` - Login with email and password
+- `POST /auth/refresh` - Refresh access token
+- `POST /auth/logout` - Logout (revoke refresh token)
+- `POST /auth/verify-email` - Verify email address
+- `POST /auth/resend-verification` - Resend verification email
+- `POST /auth/request-password-reset` - Request password reset
+- `POST /auth/reset-password` - Reset password
+- `GET /auth/profile` - Get authenticated user profile
 
 ## Project Setup
 
