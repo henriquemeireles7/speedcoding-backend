@@ -4,6 +4,7 @@ import {
   ConflictException,
   NotFoundException,
   BadRequestException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -21,7 +22,7 @@ import {
 import { SocialUserDto } from './dto/social-user.dto';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
-import { Prisma } from '@prisma/client';
+import { Prisma, User } from '@prisma/client';
 import { UsersService } from '../users/users.service';
 import { ConfigService } from '@nestjs/config';
 
@@ -403,7 +404,15 @@ export class AuthService {
    * @returns Access and refresh tokens
    */
   async socialLogin(socialUser: SocialUserDto): Promise<TokensDto> {
-    const { email, provider, providerId, firstName, lastName, picture, username } = socialUser;
+    const {
+      email,
+      provider,
+      providerId,
+      firstName,
+      lastName,
+      picture,
+      username,
+    } = socialUser;
 
     // Check if user exists by provider and providerId
     let user = await this.prisma.user.findFirst({
@@ -428,82 +437,98 @@ export class AuthService {
     const displayName = [firstName, lastName].filter(Boolean).join(' ');
 
     // Generate a username if not provided
-    const generatedUsername = username || this.generateUsername(email, firstName, lastName);
+    const generatedUsername =
+      username || this.generateUsername(email, firstName, lastName);
 
-    if (user) {
-      // User exists, update social connection if needed
-      const existingConnection = await this.prisma.socialConnection.findFirst({
-        where: {
-          userId: user.id,
-          provider,
-          providerId,
-        },
-      });
+    try {
+      if (user) {
+        // User exists, update social connection if needed
+        // Use a direct query to check for existing connection
+        const connections = await this.prisma.$queryRaw`
+          SELECT * FROM "SocialConnection" 
+          WHERE "userId" = ${user.id} 
+          AND "provider" = ${provider} 
+          AND "providerId" = ${providerId}
+        `;
 
-      if (!existingConnection) {
-        // Add new social connection
-        await this.prisma.socialConnection.create({
-          data: {
-            provider,
-            providerId,
-            userId: user.id,
-          },
+        const existingConnection =
+          Array.isArray(connections) && connections.length > 0;
+
+        if (!existingConnection) {
+          // Add new social connection using a direct query
+          await this.prisma.$executeRaw`
+            INSERT INTO "SocialConnection" ("userId", "provider", "providerId", "createdAt", "updatedAt")
+            VALUES (${user.id}, ${provider}, ${providerId}, NOW(), NOW())
+          `;
+        }
+
+        // Update user profile with social data if needed
+        if (!user.avatarUrl && picture && user.displayName !== undefined) {
+          try {
+            await this.prisma.user.update({
+              where: { id: user.id },
+              data: {
+                avatarUrl: picture,
+                displayName: user.displayName || displayName,
+              },
+            });
+          } catch (error) {
+            console.error('Error updating user profile:', error);
+            // Continue execution even if update fails
+          }
+        }
+      } else {
+        // Create new user with social data
+        // Generate a random password for the user
+        const randomPassword = uuidv4();
+        const passwordHash = await bcrypt.hash(randomPassword, 10);
+
+        // Create user and social connection in a transaction
+        const result = await this.prisma.$transaction(async (tx) => {
+          // Check if username is already taken
+          const existingUserByUsername = await tx.user.findUnique({
+            where: { username: generatedUsername },
+          });
+
+          // If username is taken, append a random string
+          const finalUsername = existingUserByUsername
+            ? `${generatedUsername}-${Math.random().toString(36).substring(2, 8)}`
+            : generatedUsername;
+
+          // Create user
+          const newUser = await tx.user.create({
+            data: {
+              email,
+              username: finalUsername,
+              passwordHash,
+              isEmailVerified: true, // Social login users are considered verified
+              displayName: displayName || finalUsername,
+              avatarUrl: picture,
+            },
+          });
+
+          // Create social connection using a direct query
+          await tx.$executeRaw`
+            INSERT INTO "SocialConnection" ("userId", "provider", "providerId", "createdAt", "updatedAt")
+            VALUES (${newUser.id}, ${provider}, ${providerId}, NOW(), NOW())
+          `;
+
+          return newUser;
         });
+
+        // The result is already a User type from Prisma
+        user = result;
       }
+    } catch (error) {
+      console.error('Error in social login:', error);
+      throw new InternalServerErrorException('Failed to process social login');
+    }
 
-      // Update user profile with social data if needed
-      if (!user.avatarUrl && picture) {
-        await this.prisma.user.update({
-          where: { id: user.id },
-          data: {
-            avatarUrl: picture,
-            displayName: user.displayName || displayName,
-          },
-        });
-      }
-    } else {
-      // Create new user with social data
-      // Generate a random password for the user
-      const randomPassword = uuidv4();
-      const passwordHash = await bcrypt.hash(randomPassword, 10);
-
-      // Create user and social connection in a transaction
-      const result = await this.prisma.$transaction(async (prisma) => {
-        // Check if username is already taken
-        const existingUserByUsername = await prisma.user.findUnique({
-          where: { username: generatedUsername },
-        });
-
-        // If username is taken, append a random string
-        const finalUsername = existingUserByUsername
-          ? `${generatedUsername}-${Math.random().toString(36).substring(2, 8)}`
-          : generatedUsername;
-
-        // Create user
-        const newUser = await prisma.user.create({
-          data: {
-            email,
-            username: finalUsername,
-            passwordHash,
-            isEmailVerified: true, // Social login users are considered verified
-            displayName: displayName || finalUsername,
-            avatarUrl: picture,
-          },
-        });
-
-        // Create social connection
-        await prisma.socialConnection.create({
-          data: {
-            provider,
-            providerId,
-            userId: newUser.id,
-          },
-        });
-
-        return newUser;
-      });
-
-      user = result;
+    // Ensure user is defined before generating tokens
+    if (!user) {
+      throw new InternalServerErrorException(
+        'Failed to retrieve or create user',
+      );
     }
 
     // Generate tokens
@@ -524,7 +549,11 @@ export class AuthService {
    * @param lastName User last name
    * @returns Generated username
    */
-  private generateUsername(email: string, firstName?: string, lastName?: string): string {
+  private generateUsername(
+    email: string,
+    firstName?: string,
+    lastName?: string,
+  ): string {
     if (firstName && lastName) {
       // Use first name and last name initial
       return `${firstName.toLowerCase()}${lastName.charAt(0).toLowerCase()}`;
