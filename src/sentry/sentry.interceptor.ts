@@ -13,6 +13,23 @@ import { SentryService } from './sentry.service';
 import { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 
+// Define a more specific user type
+interface RequestUser {
+  id: string | number;
+  email?: string | null;
+  username?: string | null;
+  [key: string]: any;
+}
+
+// Extend Express Request to include our user type
+declare global {
+  namespace Express {
+    interface Request {
+      user?: RequestUser;
+    }
+  }
+}
+
 /**
  * Interceptor that captures request context and errors for Sentry
  * Adds breadcrumbs, user context, and transaction data
@@ -50,11 +67,6 @@ export class SentryInterceptor implements NestInterceptor {
       },
     });
 
-    // Set transaction on scope
-    Sentry.getCurrentHub().configureScope((scope) => {
-      scope.setSpan(transaction);
-    });
-
     // Add request data as breadcrumb
     this.sentryService.addBreadcrumb({
       category: 'http',
@@ -73,9 +85,9 @@ export class SentryInterceptor implements NestInterceptor {
     // Set user context if available
     if (user) {
       this.sentryService.setUser({
-        id: user.id,
-        email: user.email,
-        username: user.username,
+        id: String(user.id),
+        email: user.email ? String(user.email) : undefined,
+        username: user.username ? String(user.username) : undefined,
       });
     } else {
       // Use IP as anonymous user ID
@@ -85,9 +97,14 @@ export class SentryInterceptor implements NestInterceptor {
     }
 
     // Set request context
+    const requestId = headers['x-request-id'];
     this.sentryService.setTag(
       'request_id',
-      headers['x-request-id'] || 'unknown',
+      requestId
+        ? Array.isArray(requestId)
+          ? requestId[0]
+          : requestId
+        : 'unknown',
     );
     this.sentryService.setTag('http.method', method);
     this.sentryService.setTag('http.url', url);
@@ -96,8 +113,10 @@ export class SentryInterceptor implements NestInterceptor {
       tap(() => {
         // Request completed successfully
         const response = context.switchToHttp().getResponse<Response>();
-        transaction.setHttpStatus(response.statusCode);
-        transaction.finish();
+        if (transaction) {
+          transaction.setHttpStatus(response.statusCode);
+          transaction.finish();
+        }
       }),
       catchError((error) => {
         // Extract status code and message
@@ -110,7 +129,9 @@ export class SentryInterceptor implements NestInterceptor {
         }
 
         // Set error context
-        transaction.setHttpStatus(status);
+        if (transaction) {
+          transaction.setHttpStatus(status);
+        }
         this.sentryService.setTag('error', 'true');
         this.sentryService.setTag('error.type', error.name);
         this.sentryService.setTag('error.message', message);
@@ -121,21 +142,24 @@ export class SentryInterceptor implements NestInterceptor {
           // Add request body for server errors, but sanitize sensitive data
           const sanitizedBody = this.sanitizeRequestBody(body);
 
-          this.sentryService.captureException(error, (scope) => {
-            scope.setExtra('request', {
-              method,
-              url,
-              headers: this.sanitizeHeaders(headers),
-              params,
-              query,
-              body: sanitizedBody,
-            });
-            return scope;
+          this.sentryService.captureException(error, {
+            extra: {
+              request: {
+                method,
+                url,
+                headers: this.sanitizeHeaders(headers),
+                params,
+                query,
+                body: sanitizedBody,
+              },
+            },
           });
         }
 
         // Finish the transaction
-        transaction.finish();
+        if (transaction) {
+          transaction.finish();
+        }
 
         // Re-throw the error to be handled by exception filters
         throw error;
@@ -177,7 +201,12 @@ export class SentryInterceptor implements NestInterceptor {
 
     sensitiveHeaders.forEach((header) => {
       if (sanitized[header]) {
-        sanitized[header] = '[REDACTED]';
+        // Handle both string and string[] headers
+        if (Array.isArray(sanitized[header])) {
+          sanitized[header] = ['[REDACTED]'];
+        } else {
+          sanitized[header] = '[REDACTED]';
+        }
       }
     });
 

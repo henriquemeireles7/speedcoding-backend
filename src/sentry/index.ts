@@ -84,4 +84,8 @@ export class SentryModule {
   }
 }
 
-export { SentryExceptionFilter };
+// Export the Sentry module and components
+export { SentryModule } from './sentry.module';
+export { SentryService } from './sentry.service';
+export { SentryInterceptor } from './sentry.interceptor';
+export { SentryExceptionFilter } from './sentry.filter';

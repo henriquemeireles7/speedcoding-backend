@@ -2,7 +2,6 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as Sentry from '@sentry/node';
 import { RewriteFrames } from '@sentry/integrations';
-import { ProfilingIntegration } from '@sentry/profiling-node';
 import { Scope, Span, Transaction } from '@sentry/types';
 
 /**
@@ -47,7 +46,7 @@ export class SentryService implements OnModuleInit {
           root: process.cwd(),
         }),
         // Enable profiling integration
-        new ProfilingIntegration(),
+        // new ProfilingIntegration(),
       ],
       // Set max breadcrumbs to avoid memory issues
       maxBreadcrumbs: 50,
@@ -67,9 +66,9 @@ export class SentryService implements OnModuleInit {
    */
   captureException(
     exception: Error,
-    scope?: Scope | ((scope: Scope) => void),
+    captureContext?: ((scope: Scope) => Scope) | Record<string, any>,
   ): string {
-    return Sentry.captureException(exception, scope);
+    return Sentry.captureException(exception, captureContext);
   }
 
   /**
@@ -77,9 +76,9 @@ export class SentryService implements OnModuleInit {
    */
   captureMessage(
     message: string,
-    scope?: Scope | ((scope: Scope) => void),
+    captureContext?: ((scope: Scope) => Scope) | Record<string, any>,
   ): string {
-    return Sentry.captureMessage(message, scope);
+    return Sentry.captureMessage(message, captureContext);
   }
 
   /**
@@ -106,9 +105,18 @@ export class SentryService implements OnModuleInit {
     },
     parentSpan?: Span,
   ): Span {
-    return parentSpan
-      ? parentSpan.startChild(context)
-      : Sentry.startSpan(context);
+    if (parentSpan) {
+      return parentSpan.startChild(context);
+    }
+
+    // Use transaction to start span if no direct Sentry.startSpan method
+    const transaction = this.getCurrentTransaction();
+    if (transaction) {
+      return transaction.startChild(context);
+    }
+
+    // Fallback to creating a new transaction
+    return this.startTransaction(context);
   }
 
   /**
@@ -148,14 +156,16 @@ export class SentryService implements OnModuleInit {
    * Get the current active transaction
    */
   getCurrentTransaction(): Transaction | undefined {
-    return Sentry.getCurrentHub().getScope()?.getTransaction();
+    const scope = Sentry.getCurrentScope();
+    return scope?.getTransaction();
   }
 
   /**
    * Get the current active span
    */
   getCurrentSpan(): Span | undefined {
-    return Sentry.getCurrentHub().getScope()?.getSpan();
+    const scope = Sentry.getCurrentScope();
+    return scope?.getSpan();
   }
 
   /**

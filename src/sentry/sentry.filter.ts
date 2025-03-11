@@ -127,7 +127,12 @@ export class SentryExceptionFilter implements ExceptionFilter {
 
     sensitiveHeaders.forEach((header) => {
       if (sanitized[header]) {
-        sanitized[header] = '[REDACTED]';
+        // Handle both string and string[] headers
+        if (Array.isArray(sanitized[header])) {
+          sanitized[header] = ['[REDACTED]'];
+        } else {
+          sanitized[header] = '[REDACTED]';
+        }
       }
     });
 
