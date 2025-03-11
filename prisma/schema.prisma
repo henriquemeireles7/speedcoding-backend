@@ -9,11 +9,10 @@ datasource db {
 
 // User model for authentication
 model User {
-  id                    Int       @id @default(autoincrement())
+  id                    String    @id @default(uuid()) @db.Uuid
   username              String    @unique @db.VarChar(50)
   email                 String    @unique @db.VarChar(255)
   passwordHash          String    @db.VarChar(255) // Hashed password (e.g., bcrypt)
-  createdAt             DateTime  @default(now())
   isEmailVerified       Boolean   @default(false)
   verificationToken     String?   @db.VarChar(255)
   verificationTokenExpiry DateTime?
@@ -21,51 +20,69 @@ model User {
   resetTokenExpiry      DateTime?
   runs                  Run[]     // One-to-many relation
   refreshTokens         RefreshToken[] // One-to-many relation for refresh tokens
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 }
 
 // RefreshToken model for JWT refresh tokens
 model RefreshToken {
-  id        Int      @id @default(autoincrement())
-  token     String   @unique @db.VarChar(255)
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String    @id @default(uuid()) @db.Uuid
+  token     String    @unique @db.VarChar(255)
+  userId    String    @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
-  createdAt DateTime @default(now())
-  isRevoked Boolean  @default(false)
+  isRevoked Boolean   @default(false)
+  createdAt DateTime  @default(now())
+}
+
+// Vibe model for categorizing runs
+model Vibe {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @db.VarChar(100)
+  description String?   @db.Text
+  runs        Run[]     // One-to-many relation
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 // Run model for speedrun tracking
 model Run {
-  id         Int          @id @default(autoincrement())
-  userId     Int
-  user       User         @relation(fields: [userId], references: [id])
-  techStack  String?      @db.VarChar(255) // e.g., "Node.js, Express"
-  startTime  DateTime     @default(now())
-  endTime    DateTime?
-  totalTime  String?      // Stored as text (e.g., "45m 12s"); Prisma doesn't support INTERVAL natively
-  milestones Milestone[] // One-to-many relation
-  submission Submission? // One-to-one relation
+  id                String      @id @default(uuid()) @db.Uuid
+  userId            String      @db.Uuid
+  user              User        @relation(fields: [userId], references: [id])
+  vibeId            String?     @db.Uuid
+  vibe              Vibe?       @relation(fields: [vibeId], references: [id])
+  techStack         Json?       // Stored as JSON (e.g., ["React", "Node.js"])
+  startTime         DateTime    @default(now())
+  endTime           DateTime?
+  completed         Boolean     @default(false)
+  totalTimeInSeconds Int?
+  milestones        Milestone[] // One-to-many relation
+  submissions       Submission[] // One-to-many relation
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
 }
 
 // Milestone model for individual milestone completions
 model Milestone {
-  id             Int      @id @default(autoincrement())
-  runId          Int
-  run            Run      @relation(fields: [runId], references: [id])
-  milestoneNumber Int     @db.SmallInt // 1 to 7
-  completedAt    DateTime
-  passed         Boolean  @default(false)
+  id             String    @id @default(uuid()) @db.Uuid
+  runId          String    @db.Uuid
+  run            Run       @relation(fields: [runId], references: [id])
+  milestoneIndex Int       @db.SmallInt // 1 to 7
+  verified       Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
 
 // Submission model for final run data
 model Submission {
-  id          Int      @id @default(autoincrement())
-  runId       Int      @unique
-  run         Run      @relation(fields: [runId], references: [id])
-  packages    String[] // Array of packages (e.g., ["express", "socket.io"])
-  videoUrl    String?  @db.VarChar(255) // Nullable if no recording
-  submittedAt DateTime @default(now())
-  status      Status   @default(PENDING)
+  id          String    @id @default(uuid()) @db.Uuid
+  runId       String    @db.Uuid
+  run         Run       @relation(fields: [runId], references: [id])
+  videoUrl    String?   @db.VarChar(255) // Nullable if no recording
+  status      Status    @default(PENDING)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 // Enum for submission status
