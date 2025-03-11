@@ -69,7 +69,16 @@ export class CredentialsService {
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
     const verificationUrl = `${frontendUrl}/verify-email?token=${token}`;
 
-    await this.mailService.sendVerificationEmail(email, verificationUrl);
+    const user = await this.userRepository.findByEmail(email);
+    if (!user) {
+      throw new UserNotFoundException('User not found');
+    }
+
+    await this.mailService.sendVerificationEmail(
+      email,
+      user.username,
+      verificationUrl,
+    );
   }
 
   /**
@@ -83,7 +92,10 @@ export class CredentialsService {
       throw new UserNotFoundException('User not found or token is invalid');
     }
 
-    if (user.verificationTokenExpiry < new Date()) {
+    if (
+      user.verificationTokenExpiry &&
+      user.verificationTokenExpiry < new Date()
+    ) {
       throw new AuthenticationException('Verification token has expired');
     }
 
@@ -123,7 +135,16 @@ export class CredentialsService {
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
 
-    await this.mailService.sendPasswordResetEmail(email, resetUrl);
+    const user = await this.userRepository.findByEmail(email);
+    if (!user) {
+      throw new UserNotFoundException('User not found');
+    }
+
+    await this.mailService.sendPasswordResetEmail(
+      email,
+      user.username,
+      resetUrl,
+    );
   }
 
   /**
@@ -138,7 +159,7 @@ export class CredentialsService {
       throw new UserNotFoundException('User not found or token is invalid');
     }
 
-    if (user.resetTokenExpiry < new Date()) {
+    if (user.resetTokenExpiry && user.resetTokenExpiry < new Date()) {
       throw new AuthenticationException('Reset token has expired');
     }
 
