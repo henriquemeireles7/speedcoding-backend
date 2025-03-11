@@ -1,14 +1,14 @@
-import { Body, Controller, Post, HttpCode, HttpStatus } from '@nestjs/common';
-import { AuthService } from './auth.service';
 import {
-  AuthResponseDto,
-  LoginDto,
-  RegisterDto,
-  RefreshTokenDto,
-  TokensDto,
-} from './dto';
+  Body,
+  Controller,
+  Post,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+} from '@nestjs/common';
+import { AuthService } from './auth.service';
+import { LoginDto, RegisterDto, RefreshTokenDto, TokensDto } from './dto';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
-import { UseGuards } from '@nestjs/common';
 
 /**
  * Authentication Controller

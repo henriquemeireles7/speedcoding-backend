@@ -2,15 +2,14 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
-  NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto, RegisterDto, RefreshTokenDto, TokensDto } from './dto';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
-import { add } from 'date-fns';
-import { User } from '@prisma/client';
+import { addDays } from 'date-fns';
+import { User, Prisma } from '@prisma/client';
 
 /**
  * Authentication Service
@@ -45,7 +44,10 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
     // Create the user in a transaction with a refresh token
-    const result = await this.prisma.$transaction(async (prisma) => {
+    const result = await this.prisma.$transaction<{
+      user: User;
+      tokens: TokensDto;
+    }>(async (prisma: Prisma.TransactionClient) => {
       // Create the user
       const user = await prisma.user.create({
         data: {
@@ -55,7 +57,7 @@ export class AuthService {
       });
 
       // Generate tokens
-      const tokens = await this.generateTokens(user.id, user.username);
+      const tokens = this.generateTokens(user.id, user.username);
 
       // Create refresh token in database
       await this.storeRefreshToken(prisma, tokens.refreshToken, user.id);
@@ -91,7 +93,7 @@ export class AuthService {
     }
 
     // Generate tokens
-    const tokens = await this.generateTokens(user.id, user.username);
+    const tokens = this.generateTokens(user.id, user.username);
 
     // Store refresh token in database
     await this.storeRefreshToken(this.prisma, tokens.refreshToken, user.id);
@@ -108,10 +110,10 @@ export class AuthService {
     const { refreshToken } = refreshTokenDto;
 
     // Find the refresh token in the database
-    const storedToken = await this.prisma.refreshToken.findUnique({
+    const storedToken = (await this.prisma.refreshToken.findUnique({
       where: { token: refreshToken },
       include: { user: true },
-    });
+    })) as Prisma.RefreshTokenGetPayload<{ include: { user: true } }> | null;
 
     // Validate the token
     if (
@@ -123,13 +125,13 @@ export class AuthService {
     }
 
     // Generate new tokens
-    const tokens = await this.generateTokens(
+    const tokens = this.generateTokens(
       storedToken.user.id,
       storedToken.user.username,
     );
 
     // Revoke the old token and store the new one in a transaction
-    await this.prisma.$transaction(async (prisma) => {
+    await this.prisma.$transaction(async (prisma: Prisma.TransactionClient) => {
       // Revoke the old token
       await prisma.refreshToken.update({
         where: { id: storedToken.id },
@@ -164,10 +166,7 @@ export class AuthService {
    * @param username Username
    * @returns Access and refresh tokens
    */
-  private async generateTokens(
-    userId: number,
-    username: string,
-  ): Promise<TokensDto> {
+  private generateTokens(userId: number, username: string): TokensDto {
     const payload = {
       sub: userId,
       username,
@@ -192,12 +191,12 @@ export class AuthService {
    * @param userId User ID
    */
   private async storeRefreshToken(
-    prisma: PrismaService | any,
+    prisma: Prisma.TransactionClient,
     refreshToken: string,
     userId: number,
   ): Promise<void> {
     // Set expiration date (30 days from now)
-    const expiresAt = add(new Date(), { days: 30 });
+    const expiresAt = addDays(new Date(), 30);
 
     await prisma.refreshToken.create({
       data: {
