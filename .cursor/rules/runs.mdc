@@ -1,6 +1,6 @@
 ---
-description: Guidelines for sessions Modules
-globs: src/sessions/**/*.{ts}
+description: Guidelines for runs Modules
+globs: src/runs/**/*.{ts}
 alwaysApply: false
 ---
    - **Description**: Guides AI on session-related logic, including starting/ending sessions and handling multipart uploads.

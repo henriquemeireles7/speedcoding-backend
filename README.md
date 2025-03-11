@@ -93,6 +93,17 @@ The SpeedCoding backend uses JWT (JSON Web Tokens) for authentication. The authe
 - `GET /runs/:runId` - Get details for a specific run
 - `GET /runs` - List all runs for the authenticated user
 
+### Milestones
+
+- `POST /verify/m1` - Verify milestone 1 for a run
+- `POST /verify/m2` - Verify milestone 2 for a run
+- `POST /verify/m3` - Verify milestone 3 for a run
+- `POST /verify/m4` - Verify milestone 4 for a run
+- `POST /verify/m5` - Verify milestone 5 for a run
+- `POST /verify/m6` - Verify milestone 6 for a run
+- `POST /verify/m7` - Verify milestone 7 for a run
+- `GET /verify/milestones/:runId` - Get all milestones for a run
+
 ## Project Setup
 
 ```bash

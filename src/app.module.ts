@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { RunsModule } from './runs/runs.module';
 import { MilestonesModule } from './milestones/milestones.module';
+import { SubmissionsModule } from './submissions/submissions.module';
 import { PrismaService } from './prisma/prisma.service';
 import { ThrottlerModule } from '@nestjs/throttler';
 
@@ -22,6 +23,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     AuthModule,
     RunsModule,
     MilestonesModule,
+    SubmissionsModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],
