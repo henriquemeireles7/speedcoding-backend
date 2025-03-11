@@ -1,71 +1,82 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SocialMediaLinkDto } from '../dto/update-user.dto';
 
 /**
  * User entity
+ * Core domain entity representing a user in the system
  */
 export class User {
-  @ApiProperty({ description: 'Unique identifier' })
   id: string;
-
-  @ApiProperty({ description: 'Username' })
   username: string;
-
-  @ApiProperty({ description: 'Email address' })
   email: string;
-
-  @ApiProperty({ description: 'Password hash' })
   passwordHash: string;
-
-  @ApiProperty({ description: 'Whether email is verified' })
   isEmailVerified: boolean;
-
-  @ApiPropertyOptional({ description: 'Email verification token' })
   verificationToken?: string | null;
-
-  @ApiPropertyOptional({ description: 'Email verification token expiry' })
   verificationTokenExpiry?: Date | null;
-
-  @ApiPropertyOptional({ description: 'Password reset token' })
   resetToken?: string | null;
-
-  @ApiPropertyOptional({ description: 'Password reset token expiry' })
   resetTokenExpiry?: Date | null;
-
-  @ApiPropertyOptional({ description: 'Display name' })
   displayName?: string | null;
-
-  @ApiPropertyOptional({ description: 'User biography' })
   bio?: string | null;
-
-  @ApiPropertyOptional({ description: 'Avatar URL' })
   avatarUrl?: string | null;
-
-  @ApiPropertyOptional({
-    description: 'User preferences',
-    type: 'object',
-    additionalProperties: true,
-  })
   preferences?: Record<string, any> | null;
-
-  @ApiPropertyOptional({ description: 'User location' })
   location?: string | null;
-
-  @ApiPropertyOptional({ description: 'User website' })
   website?: string | null;
-
-  @ApiPropertyOptional({
-    description: 'Social media links',
-    type: [SocialMediaLinkDto],
-  })
   socialLinks?: SocialMediaLinkDto[] | null;
-
-  @ApiPropertyOptional({ description: 'User skills', type: [String] })
   skills?: string[] | null;
-
-  @ApiProperty({ description: 'Creation timestamp' })
   createdAt: Date;
-
-  @ApiProperty({ description: 'Last update timestamp' })
   updatedAt: Date;
+
+  /**
+   * Check if the user's email is verified
+   * @returns True if the email is verified
+   */
+  isVerified(): boolean {
+    return this.isEmailVerified;
+  }
+
+  /**
+   * Check if the user has a verification token that is still valid
+   * @returns True if the verification token is valid
+   */
+  hasValidVerificationToken(): boolean {
+    return (
+      !!this.verificationToken &&
+      !!this.verificationTokenExpiry &&
+      this.verificationTokenExpiry > new Date()
+    );
+  }
+
+  /**
+   * Check if the user has a reset token that is still valid
+   * @returns True if the reset token is valid
+   */
+  hasValidResetToken(): boolean {
+    return (
+      !!this.resetToken &&
+      !!this.resetTokenExpiry &&
+      this.resetTokenExpiry > new Date()
+    );
+  }
+
+  /**
+   * Get the user's full name or username if display name is not set
+   * @returns The user's display name or username
+   */
+  getDisplayName(): string {
+    return this.displayName || this.username;
+  }
+
+  /**
+   * Check if the user has completed their profile
+   * @returns True if the user has completed their profile
+   */
+  hasCompletedProfile(): boolean {
+    return !!(
+      this.displayName &&
+      this.bio &&
+      this.avatarUrl &&
+      this.location &&
+      this.skills &&
+      this.skills.length > 0
+    );
+  }
 }

@@ -1,46 +1,58 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { User } from '../../users/entities/user.entity';
 
 /**
  * Auth User entity
- * Represents the user data needed for authentication purposes
+ * Extends the base User entity with authentication-specific functionality
  */
-export class AuthUser {
-  @ApiProperty({ description: 'Unique identifier' })
-  id: string;
+export class AuthUser extends User {
+  /**
+   * Check if the user can login
+   * @returns True if the user can login
+   */
+  canLogin(): boolean {
+    return true; // Add any login restrictions here if needed
+  }
 
-  @ApiProperty({ description: 'Username' })
-  username: string;
+  /**
+   * Check if the user requires email verification before login
+   * @returns True if email verification is required
+   */
+  requiresEmailVerification(): boolean {
+    return !this.isEmailVerified;
+  }
 
-  @ApiProperty({ description: 'Email address' })
-  email: string;
+  /**
+   * Check if the user's verification token has expired
+   * @returns True if the verification token has expired
+   */
+  isVerificationTokenExpired(): boolean {
+    return (
+      !!this.verificationToken &&
+      !!this.verificationTokenExpiry &&
+      this.verificationTokenExpiry < new Date()
+    );
+  }
 
-  @ApiProperty({ description: 'Password hash' })
-  passwordHash: string;
+  /**
+   * Check if the user's reset token has expired
+   * @returns True if the reset token has expired
+   */
+  isResetTokenExpired(): boolean {
+    return (
+      !!this.resetToken &&
+      !!this.resetTokenExpiry &&
+      this.resetTokenExpiry < new Date()
+    );
+  }
 
-  @ApiProperty({ description: 'Whether email is verified' })
-  isEmailVerified: boolean;
-
-  @ApiPropertyOptional({ description: 'Email verification token' })
-  verificationToken?: string | null;
-
-  @ApiPropertyOptional({ description: 'Email verification token expiry' })
-  verificationTokenExpiry?: Date | null;
-
-  @ApiPropertyOptional({ description: 'Password reset token' })
-  resetToken?: string | null;
-
-  @ApiPropertyOptional({ description: 'Password reset token expiry' })
-  resetTokenExpiry?: Date | null;
-
-  @ApiPropertyOptional({ description: 'Display name' })
-  displayName?: string | null;
-
-  @ApiPropertyOptional({ description: 'Avatar URL' })
-  avatarUrl?: string | null;
-
-  @ApiProperty({ description: 'Creation timestamp' })
-  createdAt: Date;
-
-  @ApiProperty({ description: 'Last update timestamp' })
-  updatedAt: Date;
+  /**
+   * Create a new instance from a database user object
+   * @param data User data from database
+   * @returns AuthUser instance
+   */
+  static fromDatabaseUser(data: any): AuthUser {
+    const authUser = new AuthUser();
+    Object.assign(authUser, data);
+    return authUser;
+  }
 }
