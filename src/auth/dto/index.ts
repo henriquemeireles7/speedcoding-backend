@@ -3,3 +3,7 @@ export * from './auth-response.dto';
 export * from './register.dto';
 export * from './refresh-token.dto';
 export * from './tokens.dto';
+export * from './verify-email.dto';
+export * from './resend-verification.dto';
+export * from './request-password-reset.dto';
+export * from './reset-password.dto';

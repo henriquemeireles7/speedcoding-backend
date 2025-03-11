@@ -9,12 +9,18 @@ datasource db {
 
 // User model for authentication
 model User {
-  id          Int       @id @default(autoincrement())
-  username    String    @unique @db.VarChar(50)
-  passwordHash String   @db.VarChar(255) // Hashed password (e.g., bcrypt)
-  createdAt   DateTime  @default(now())
-  sessions    Session[] // One-to-many relation
-  refreshTokens RefreshToken[] // One-to-many relation for refresh tokens
+  id                    Int       @id @default(autoincrement())
+  username              String    @unique @db.VarChar(50)
+  email                 String    @unique @db.VarChar(255)
+  passwordHash          String    @db.VarChar(255) // Hashed password (e.g., bcrypt)
+  createdAt             DateTime  @default(now())
+  isEmailVerified       Boolean   @default(false)
+  verificationToken     String?   @db.VarChar(255)
+  verificationTokenExpiry DateTime?
+  resetToken            String?   @db.VarChar(255)
+  resetTokenExpiry      DateTime?
+  sessions              Session[] // One-to-many relation
+  refreshTokens         RefreshToken[] // One-to-many relation for refresh tokens
 }
 
 // RefreshToken model for JWT refresh tokens
