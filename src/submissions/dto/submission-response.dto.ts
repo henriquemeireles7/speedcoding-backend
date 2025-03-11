@@ -4,7 +4,7 @@
 export class SubmissionResponseDto {
   id: string;
   runId: string;
-  videoUrl: string;
+  videoUrl: string | null;
   status: string;
   createdAt: Date;
   updatedAt: Date;
