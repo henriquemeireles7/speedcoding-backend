@@ -1,10 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { SocialMediaLinkDto } from '../dto/update-user.dto';
 
 /**
- * User entity
+ * Auth User entity
+ * Represents the user data needed for authentication purposes
  */
-export class User {
+export class AuthUser {
   @ApiProperty({ description: 'Unique identifier' })
   id: string;
 
@@ -35,33 +35,8 @@ export class User {
   @ApiPropertyOptional({ description: 'Display name' })
   displayName?: string | null;
 
-  @ApiPropertyOptional({ description: 'User biography' })
-  bio?: string | null;
-
   @ApiPropertyOptional({ description: 'Avatar URL' })
   avatarUrl?: string | null;
-
-  @ApiPropertyOptional({
-    description: 'User preferences',
-    type: 'object',
-    additionalProperties: true,
-  })
-  preferences?: Record<string, any> | null;
-
-  @ApiPropertyOptional({ description: 'User location' })
-  location?: string | null;
-
-  @ApiPropertyOptional({ description: 'User website' })
-  website?: string | null;
-
-  @ApiPropertyOptional({
-    description: 'Social media links',
-    type: [SocialMediaLinkDto],
-  })
-  socialLinks?: SocialMediaLinkDto[] | null;
-
-  @ApiPropertyOptional({ description: 'User skills', type: [String] })
-  skills?: string[] | null;
 
   @ApiProperty({ description: 'Creation timestamp' })
   createdAt: Date;

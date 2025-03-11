@@ -1,19 +1,21 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
-import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { PassportModule } from '@nestjs/passport';
 import { AuthController } from './auth.controller';
 import { AuthService } from './services/auth.service';
 import { TokenService } from './services/token.service';
 import { CredentialsService } from './services/credentials.service';
 import { SocialAuthService } from './services/social-auth.service';
-import { UserRepository } from './repositories/user.repository';
+import { LoginService } from './services/login.service';
+import { RegisterService } from './services/register.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { GitHubStrategy } from './strategies/github.strategy';
-import { PrismaService } from '../prisma/prisma.service';
+import { UserRepository } from './repositories/user.repository';
+import { RefreshTokenRepository } from './repositories/refresh-token.repository';
 import { MailModule } from '../mail/mail.module';
-import { UsersModule } from '../users/users.module';
+import { PrismaService } from '../prisma/prisma.service';
 import { EmailVerifiedGuard } from './guards/email-verified.guard';
 
 /**
@@ -25,16 +27,15 @@ import { EmailVerifiedGuard } from './guards/email-verified.guard';
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
+      inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
         signOptions: {
           expiresIn: configService.get<string>('JWT_EXPIRES_IN', '15m'),
         },
       }),
-      inject: [ConfigService],
     }),
     MailModule,
-    UsersModule,
   ],
   controllers: [AuthController],
   providers: [
@@ -42,22 +43,16 @@ import { EmailVerifiedGuard } from './guards/email-verified.guard';
     TokenService,
     CredentialsService,
     SocialAuthService,
-    UserRepository,
+    LoginService,
+    RegisterService,
     JwtStrategy,
     GoogleStrategy,
     GitHubStrategy,
+    UserRepository,
+    RefreshTokenRepository,
     PrismaService,
     EmailVerifiedGuard,
   ],
-  exports: [
-    AuthService,
-    TokenService,
-    CredentialsService,
-    SocialAuthService,
-    UserRepository,
-    JwtStrategy,
-    PassportModule,
-    EmailVerifiedGuard,
-  ],
+  exports: [AuthService, JwtStrategy, PassportModule],
 })
 export class AuthModule {}

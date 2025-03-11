@@ -74,7 +74,9 @@ export class UsersService {
       ...restOfData,
       // Handle socialLinks separately with proper typing for JSON field
       ...(socialLinks && {
-        socialLinks: JSON.parse(JSON.stringify(socialLinks)),
+        socialLinks: JSON.parse(
+          JSON.stringify(socialLinks),
+        ) as Prisma.InputJsonValue,
       }),
     };
 

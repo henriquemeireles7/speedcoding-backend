@@ -33,6 +33,7 @@ import { UserResponseDto } from './dto/user-response.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { FileUploadService } from './file-upload.service';
 import { CacheEvict } from '../cache/cache.decorators';
+import { RequestWithUser } from './types/request-with-user';
 
 /**
  * Controller for managing user profiles
@@ -57,7 +58,7 @@ export class UsersController {
     description: 'User profile retrieved successfully',
     type: UserResponseDto,
   })
-  async getProfile(@Request() req): Promise<UserResponseDto> {
+  async getProfile(@Request() req: RequestWithUser): Promise<UserResponseDto> {
     const user = await this.usersService.findById(req.user.sub);
     return this.usersService.mapToDto(user);
   }
@@ -98,7 +99,7 @@ export class UsersController {
   async update(
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
-    @Request() req,
+    @Request() req: RequestWithUser,
   ): Promise<UserResponseDto> {
     // Only allow users to update their own profile
     if (req.user.sub !== id) {
@@ -142,7 +143,7 @@ export class UsersController {
   async uploadAvatar(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
-    @Request() req,
+    @Request() req: RequestWithUser,
   ): Promise<UserResponseDto> {
     // Only allow users to update their own avatar
     if (req.user.sub !== id) {
@@ -184,7 +185,7 @@ export class UsersController {
   @CacheEvict('users')
   async remove(
     @Param('id') id: string,
-    @Request() req,
+    @Request() req: RequestWithUser,
   ): Promise<{ message: string }> {
     // Only allow users to delete their own account
     if (req.user.sub !== id) {
