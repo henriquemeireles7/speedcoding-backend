@@ -5,6 +5,8 @@ import {
   HealthCheckService,
   HealthCheck,
   PrismaHealthIndicator,
+  HealthCheckResult,
+  HealthIndicatorResult,
 } from '@nestjs/terminus';
 
 /**
@@ -49,10 +51,14 @@ export class HealthController {
     },
   })
   @ApiResponse({ status: 503, description: 'Application is not healthy' })
-  check() {
+  check(): Promise<HealthCheckResult> {
     return this.health.check([
       // Check database connection
-      async () => this.prismaHealth.pingCheck('database', this.prisma),
+      async () =>
+        this.prismaHealth.pingCheck(
+          'database',
+          this.prisma,
+        ) as Promise<HealthIndicatorResult>,
     ]);
   }
 }

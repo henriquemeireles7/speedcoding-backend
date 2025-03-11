@@ -32,9 +32,9 @@ export class LoggingInterceptor implements NestInterceptor {
     // Safely extract properties
     const method = request.method || 'UNKNOWN';
     const url = request.url || 'UNKNOWN';
-    const body = request.body;
-    const params = request.params;
-    const query = request.query;
+    const body = request.body as Record<string, unknown>;
+    const params = request.params as Record<string, string>;
+    const query = request.query as Record<string, string>;
 
     // Generate request ID for tracing
     const requestId = uuidv4();

@@ -2,6 +2,11 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cache } from 'cache-manager';
 
+// Extended interface to include the reset method
+interface ExtendedCache extends Cache {
+  reset(): Promise<void>;
+}
+
 /**
  * Service for handling cache operations
  * Provides methods for get, set, delete, and invalidation
@@ -94,10 +99,8 @@ export class CacheService {
    */
   async clear(): Promise<void> {
     try {
-      // Use any to bypass type checking for reset method
-      // This is a workaround as the Cache type doesn't include reset
-      // but the actual implementation does have this method
-      await (this.cacheManager as any).reset();
+      // Cast to ExtendedCache to properly type the reset method
+      await (this.cacheManager as ExtendedCache).reset();
       this.logger.debug('Cache cleared');
     } catch (error: unknown) {
       const err = error as Error;

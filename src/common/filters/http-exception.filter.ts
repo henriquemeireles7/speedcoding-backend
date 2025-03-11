@@ -3,10 +3,25 @@ import {
   Catch,
   ArgumentsHost,
   HttpException,
-  HttpStatus,
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+
+// Add an interface for error responses
+interface ErrorResponse {
+  message?: string;
+  error?: string;
+  [key: string]: any;
+}
+
+// Add an interface for formatted responses
+interface FormattedResponse {
+  statusCode: number;
+  timestamp: string;
+  path: string;
+  method: string;
+  error: unknown;
+}
 
 /**
  * Global HTTP exception filter
@@ -30,7 +45,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     );
 
     // Format the error response
-    const formattedResponse = {
+    const formattedResponse: FormattedResponse = {
       statusCode: status,
       timestamp: new Date().toISOString(),
       path: request.url,
@@ -46,7 +61,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
    * @param errorResponse Exception response
    * @returns Formatted error message
    */
-  private getErrorMessage(errorResponse: any): any {
+  private getErrorMessage(errorResponse: unknown): unknown {
     // If the error response is a string, return it directly
     if (typeof errorResponse === 'string') {
       return {
@@ -55,10 +70,15 @@ export class HttpExceptionFilter implements ExceptionFilter {
     }
 
     // If the error response is an object with a message property, return it
-    if (typeof errorResponse === 'object' && errorResponse.message) {
+    if (
+      typeof errorResponse === 'object' &&
+      errorResponse !== null &&
+      'message' in errorResponse
+    ) {
+      const typedError = errorResponse as ErrorResponse;
       return {
-        message: errorResponse.message,
-        details: errorResponse.error || undefined,
+        message: typedError.message,
+        details: typedError.error || undefined,
       };
     }
 

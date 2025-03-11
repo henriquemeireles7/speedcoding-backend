@@ -6,9 +6,10 @@ import {
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { Request, Response as ExpressResponse } from 'express';
 
 /**
- * Interface for the response structure
+ * Standard response format for successful responses
  */
 export interface Response<T> {
   data: T;
@@ -30,11 +31,11 @@ export class TransformInterceptor<T>
     context: ExecutionContext,
     next: CallHandler,
   ): Observable<Response<T>> {
-    const request = context.switchToHttp().getRequest();
-    const response = context.switchToHttp().getResponse();
+    const request = context.switchToHttp().getRequest<Request>();
+    const response = context.switchToHttp().getResponse<ExpressResponse>();
 
     return next.handle().pipe(
-      map((data) => ({
+      map((data: T) => ({
         data,
         statusCode: response.statusCode,
         timestamp: new Date().toISOString(),

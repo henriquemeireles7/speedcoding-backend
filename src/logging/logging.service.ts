@@ -12,7 +12,7 @@ export class LoggingService implements LoggerService {
 
   constructor(private configService: ConfigService) {
     // Set log levels based on environment
-    const nodeEnv = this.configService.get('NODE_ENV', 'development');
+    const nodeEnv = this.configService.get<string>('NODE_ENV', 'development');
     if (nodeEnv === 'production') {
       this.logLevels = ['error', 'warn', 'log']; // Less verbose in production
     }
@@ -159,15 +159,17 @@ export class LoggingService implements LoggerService {
     context?: string,
     timestamp?: string,
   ): string {
-    const nodeEnv = this.configService.get('NODE_ENV', 'development');
+    const nodeEnv = this.configService.get<string>('NODE_ENV', 'development');
 
     // In production, format as JSON for better parsing
     if (nodeEnv === 'production') {
-      const logObject = {
+      const logObject: Record<string, string> = {
         level,
         message:
-          typeof message === 'object' ? JSON.stringify(message) : message,
-        context,
+          typeof message === 'object'
+            ? JSON.stringify(message)
+            : String(message),
+        context: context || '',
         timestamp: timestamp || new Date().toISOString(),
       };
 
