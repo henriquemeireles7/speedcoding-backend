@@ -4,6 +4,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 import { UserResponseDto } from './dto/user-response.dto';
 import { SocialMediaLinkDto } from './dto/update-user.dto';
+import { Prisma } from '@prisma/client';
 
 /**
  * Service for managing user profiles
@@ -65,10 +66,22 @@ export class UsersService {
     // Check if user exists
     await this.findById(id);
 
+    // Prepare the update data
+    const { socialLinks, ...restOfData } = updateUserDto;
+
+    // Create the update input with proper typing
+    const updateData: Prisma.UserUpdateInput = {
+      ...restOfData,
+      // Handle socialLinks separately with proper typing for JSON field
+      ...(socialLinks && {
+        socialLinks: JSON.parse(JSON.stringify(socialLinks)),
+      }),
+    };
+
     // Update user
     const updatedUser = await this.prisma.user.update({
       where: { id },
-      data: updateUserDto,
+      data: updateData,
     });
 
     return updatedUser as unknown as User;
