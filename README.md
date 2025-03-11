@@ -117,6 +117,14 @@ The SpeedCoding backend uses JWT (JSON Web Tokens) for authentication. The authe
     - `vibeId` (optional) - Filter by vibe
     - `limit` (optional, default 10) - Limit the number of results
 
+### Vibes
+
+- `GET /vibes` - Get all available vibes
+  - Query parameters:
+    - `limit` (optional, default 10) - Limit the number of results
+    - `offset` (optional, default 0) - Number of vibes to skip
+- `GET /vibes/:vibeId` - Get details for a specific vibe, including its milestones
+
 ## Project Setup
 
 ```bash
