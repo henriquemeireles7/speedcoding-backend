@@ -12,6 +12,23 @@ SpeedCoding is a platform that enables users to:
 - Verify milestone completions
 - Categorize runs by vibe/theme
 
+## Architecture
+
+### Auth Module
+
+The authentication module follows a modular architecture with specialized services:
+
+- **AuthService**: Acts as a facade for all authentication operations
+- **LoginService**: Handles user login, token refresh, and logout
+- **RegisterService**: Manages user registration, email verification, and password reset
+- **SocialAuthService**: Processes social authentication with Google and GitHub
+- **TokenService**: Generates and validates JWT tokens
+- **CredentialsService**: Manages password hashing and verification
+- **UserRepository**: Abstracts database operations for user data
+- **RefreshTokenRepository**: Manages refresh token storage and retrieval
+
+This separation of concerns improves maintainability and testability by isolating specific functionality into dedicated services.
+
 ## Tech Stack
 
 - **Framework**: NestJS (Node.js)
