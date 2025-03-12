@@ -1,10 +1,11 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import { CustomValidationPipe } from './common/pipes/validation.pipe';
 
 /**
  * Bootstrap the application
@@ -29,16 +30,7 @@ async function bootstrap() {
   app.setGlobalPrefix(apiPrefix);
 
   // Set up global validation pipe
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true, // Strip properties not defined in DTOs
-      transform: true, // Transform payloads to DTO instances
-      forbidNonWhitelisted: true, // Throw error if non-whitelisted properties are present
-      transformOptions: {
-        enableImplicitConversion: true, // Convert primitives automatically
-      },
-    }),
-  );
+  app.useGlobalPipes(new CustomValidationPipe());
 
   // Set up CORS
   app.enableCors({

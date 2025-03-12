@@ -23,6 +23,10 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { CustomThrottlerGuard } from './throttler/throttler.guard';
 import { PrismaModule } from './prisma/prisma.module';
 import { SentryModule } from '@sentry/nestjs/setup';
+import { RunsModule } from './runs/runs.module';
+import { LeaderboardsModule } from './leaderboards/leaderboards.module';
+import { SubmissionsModule } from './submissions/submissions.module';
+import { VibesModule } from './vibes/vibes.module';
 
 /**
  * Main application module
@@ -59,12 +63,13 @@ import { SentryModule } from '@sentry/nestjs/setup';
     // Feature modules
     UsersModule,
     AuthModule,
+    RunsModule,
+    SubmissionsModule,
+    LeaderboardsModule,
+    VibesModule,
+
     // Uncomment these as they are implemented
-    // RunsModule,
-    // SubmissionsModule,
     // VerifyModule,
-    // LeaderboardsModule,
-    // VibesModule,
 
     // Throttler module
     ThrottlerModule.forRootAsync({

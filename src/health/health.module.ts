@@ -3,10 +3,7 @@ import { TerminusModule } from '@nestjs/terminus';
 import { HealthController } from './health.controller';
 import { PrismaService } from '../prisma/prisma.service';
 import { HttpModule } from '@nestjs/axios';
-import {
-  PrometheusModule,
-  makeCounterProvider,
-} from '@willsoto/nestjs-prometheus';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { Registry } from 'prom-client';
 
 /**

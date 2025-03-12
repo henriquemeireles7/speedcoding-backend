@@ -1,6 +1,7 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
+import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import * as sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
@@ -10,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
  */
 @Injectable()
 export class FileUploadService {
+  private readonly logger = new Logger(FileUploadService.name);
   private readonly uploadDir: string;
   private readonly avatarDir: string;
   private readonly maxFileSize: number = 5 * 1024 * 1024; // 5MB
@@ -52,7 +54,9 @@ export class FileUploadService {
 
       // Return relative URL to the avatar
       return `/uploads/avatars/${filename}`;
-    } catch (error) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      this.logger.error(`Failed to process image: ${errorMessage}`);
       throw new BadRequestException('Failed to process image');
     }
   }
@@ -71,9 +75,11 @@ export class FileUploadService {
     // Check if file exists
     if (fs.existsSync(filepath)) {
       try {
-        fs.unlinkSync(filepath);
-      } catch (error) {
-        console.error('Failed to delete avatar file:', error);
+        await fsPromises.unlink(filepath);
+      } catch (err: unknown) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Unknown error';
+        this.logger.error(`Failed to delete avatar file: ${errorMessage}`);
       }
     }
   }

@@ -9,13 +9,12 @@ import {
   Request,
   ForbiddenException,
   Query,
-  ParseIntPipe,
-  DefaultValuePipe,
   Post,
   UseInterceptors,
   UploadedFile,
   BadRequestException,
 } from '@nestjs/common';
+import { ParseIntPipe, DefaultValuePipe } from '../common/pipes';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';

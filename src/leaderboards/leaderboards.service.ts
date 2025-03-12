@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { LeaderboardQueryDto, LeaderboardEntryDto } from './dto';
-import { Status } from '@prisma/client';
+import { Prisma, Status } from '@prisma/client';
 
 /**
  * Service for managing leaderboards
@@ -21,7 +21,7 @@ export class LeaderboardsService {
     const { vibeId, limit = 10 } = queryDto;
 
     // Build the where clause for filtering
-    const where: any = {
+    const where: Prisma.RunWhereInput = {
       completed: true,
       submissions: {
         some: {
