@@ -5,6 +5,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { UserRepository } from '../repositories/user.repository';
+import { Request } from 'express';
+import { JwtPayload } from '../types/jwt-payload';
 
 /**
  * Guard to check if user's email is verified
@@ -15,8 +17,8 @@ export class EmailVerifiedGuard implements CanActivate {
   constructor(private userRepository: UserRepository) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
-    const user = request.user;
+    const request = context.switchToHttp().getRequest<Request>();
+    const user = request.user as JwtPayload | undefined;
 
     // If no user is authenticated, this should be handled by the JWT guard
     if (!user) {

@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { v4 as uuidv4 } from 'uuid';
 import { TokensDto } from '../dto/tokens.dto';
 import { UserRepository } from '../repositories/user.repository';
+import { RefreshTokenPayload } from '../types/jwt-payload';
 
 /**
  * Service responsible for handling JWT tokens
@@ -81,11 +82,10 @@ export class TokenService {
    * @param userId User ID
    */
   async storeRefreshToken(refreshToken: string, userId: string): Promise<void> {
-    const decoded = this.jwtService.decode(refreshToken) as {
-      exp: number;
-    };
+    const decoded: unknown = this.jwtService.decode(refreshToken);
 
-    if (!decoded || !decoded.exp) {
+    // Validate token structure
+    if (!this.isValidRefreshTokenPayload(decoded)) {
       throw new Error('Invalid refresh token');
     }
 
@@ -104,10 +104,14 @@ export class TokenService {
    */
   async validateRefreshToken(refreshToken: string): Promise<string> {
     try {
-      // Verify the token signature
-      const payload = this.jwtService.verify(refreshToken, {
+      const payload: unknown = this.jwtService.verify(refreshToken, {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-      }) as { sub: string; tokenId: string };
+      });
+
+      // Validate token structure
+      if (!this.isValidRefreshTokenPayload(payload)) {
+        throw new Error('Invalid refresh token');
+      }
 
       // Check if token exists in database and is not revoked
       const isValid =
@@ -118,9 +122,27 @@ export class TokenService {
       }
 
       return payload.sub;
-    } catch (error) {
+    } catch {
       throw new Error('Invalid refresh token');
     }
+  }
+
+  /**
+   * Type guard to validate refresh token payload
+   * @param payload Any value to check
+   * @returns True if payload has the expected structure
+   */
+  private isValidRefreshTokenPayload(
+    payload: unknown,
+  ): payload is RefreshTokenPayload {
+    return (
+      !!payload &&
+      typeof payload === 'object' &&
+      'sub' in payload &&
+      typeof payload.sub === 'string' &&
+      'exp' in payload &&
+      typeof payload.exp === 'number'
+    );
   }
 
   /**

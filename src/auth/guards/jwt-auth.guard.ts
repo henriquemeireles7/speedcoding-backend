@@ -6,7 +6,7 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
-
+import { JwtPayload } from '../types/jwt-payload';
 /**
  * JWT Authentication Guard
  * Used to protect routes that require authentication
@@ -40,15 +40,22 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   }
 
   /**
-   * Handle authentication errors
-   * @param err Error object
-   * @returns Never - throws an exception
+   * Handle authentication errors and return the user if authenticated
+   * This method is called by Passport after the strategy has been executed
+   * @param err Error object or null if no error
+   * @param user User from JWT payload or false if authentication failed
+   * @returns The authenticated user object
    */
-  handleRequest(err: any, user: any) {
+  handleRequest<TUser = JwtPayload>(
+    err: Error | null | undefined,
+    user: TUser | false | null,
+  ): TUser {
     // If error or no user, throw unauthorized exception
     if (err || !user) {
       throw new UnauthorizedException(
-        err?.message || 'You are not authorized to access this resource',
+        err instanceof Error
+          ? err.message
+          : 'You are not authorized to access this resource',
       );
     }
 

@@ -8,22 +8,8 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { SentryExceptionCaptured } from '@sentry/nestjs';
-
-// Add an interface for error responses
-interface ErrorResponse {
-  message?: string;
-  error?: string;
-  [key: string]: any;
-}
-
-// Add an interface for formatted responses
-interface FormattedResponse {
-  statusCode: number;
-  timestamp: string;
-  path: string;
-  method: string;
-  error: unknown;
-}
+import { ErrorResponse } from '../types/error-response';
+import { FormattedResponse } from '../types/formatted-response';
 
 /**
  * Global exception filter

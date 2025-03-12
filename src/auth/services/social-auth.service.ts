@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
-import { SocialConnection } from '@prisma/client';
 import { SocialUserDto } from '../dto/social-user.dto';
 import { TokensDto } from '../dto/tokens.dto';
 import { UserRepository } from '../repositories/user.repository';
@@ -58,11 +57,11 @@ export class SocialAuthService {
       if (user) {
         // User exists, update social connection if needed
         const existingConnection =
-          (await this.userRepository.findSocialConnection(
+          await this.userRepository.findSocialConnection(
             user.id,
             provider,
             providerId,
-          )) as SocialConnection | null;
+          );
 
         if (!existingConnection) {
           // Add new social connection
