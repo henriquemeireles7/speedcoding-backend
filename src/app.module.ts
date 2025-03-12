@@ -22,6 +22,7 @@ import { join } from 'path';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { CustomThrottlerGuard } from './throttler/throttler.guard';
 import { PrismaModule } from './prisma/prisma.module';
+import { SentryModule } from '@sentry/nestjs/setup';
 
 /**
  * Main application module
@@ -78,10 +79,6 @@ import { PrismaModule } from './prisma/prisma.module';
   providers: [
     AppService,
     // Global exception filters
-    {
-      provide: APP_FILTER,
-      useClass: SentryExceptionFilter,
-    },
     {
       provide: APP_FILTER,
       useClass: AllExceptionsFilter,

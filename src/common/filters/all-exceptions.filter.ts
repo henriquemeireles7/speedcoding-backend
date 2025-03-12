@@ -31,11 +31,10 @@ interface FormattedResponse {
  */
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
-  @SentryExceptionCaptured()
-  catch (exception, host): void {
   private readonly logger = new Logger(AllExceptionsFilter.name);
 
-  catch(exception: unknown, host: ArgumentsHost) {
+  @SentryExceptionCaptured()
+  catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
