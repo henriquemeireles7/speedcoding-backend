@@ -17,6 +17,8 @@ import { RefreshTokenRepository } from './repositories/refresh-token.repository'
 import { MailModule } from '../mail/mail.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailVerifiedGuard } from './guards/email-verified.guard';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { AuthTestController } from './controllers/auth-test.controller';
 
 /**
  * Authentication module
@@ -37,7 +39,7 @@ import { EmailVerifiedGuard } from './guards/email-verified.guard';
     }),
     MailModule,
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, AuthTestController],
   providers: [
     AuthService,
     TokenService,
@@ -52,7 +54,14 @@ import { EmailVerifiedGuard } from './guards/email-verified.guard';
     RefreshTokenRepository,
     PrismaService,
     EmailVerifiedGuard,
+    JwtAuthGuard,
   ],
-  exports: [AuthService, JwtStrategy, PassportModule],
+  exports: [
+    AuthService,
+    JwtStrategy,
+    PassportModule,
+    JwtAuthGuard,
+    TokenService,
+  ],
 })
 export class AuthModule {}
