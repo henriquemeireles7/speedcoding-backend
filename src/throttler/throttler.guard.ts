@@ -57,9 +57,10 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
     // Ensure this is actually async even though it doesn't need to be
     await Promise.resolve();
 
-    const request = context.switchToHttp().getRequest<CustomRequest>();
-    const ip = request.ip || 'unknown';
-    const userId = request.user?.id || 'anonymous';
+    // In NestJS v11, we need to use the parent class methods
+    const req = context.switchToHttp().getRequest<CustomRequest>();
+    const ip = req.ip || 'unknown';
+    const userId = req.user?.id || 'anonymous';
 
     // For authenticated routes, use both IP and user ID
     if (userId !== 'anonymous') {
@@ -79,10 +80,11 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
     ttl: number;
     limit: number;
   } {
-    const request = context.switchToHttp().getRequest<CustomRequest>();
-    const method = request.method;
+    // In NestJS v11, we need to use the parent class methods
+    const req = context.switchToHttp().getRequest<CustomRequest>();
+    const method = req.method;
     // Type assertion for route since we know its structure
-    const route = request.route as RouteInfo | undefined;
+    const route = req.route as RouteInfo | undefined;
 
     // Default values
     const defaultTtl = 60; // 1 minute
@@ -118,7 +120,7 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
     }
 
     // User-specific endpoints (authenticated)
-    if (request.user) {
+    if (req.user) {
       return { ttl: defaultTtl, limit: 120 }; // 120 requests per minute
     }
 
@@ -139,22 +141,23 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
     // Ensure this is actually async even though it doesn't need to be
     await Promise.resolve();
 
-    const request = context.switchToHttp().getRequest<CustomRequest>();
-    const response = context.switchToHttp().getResponse<Response>();
+    // In NestJS v11, we need to use the parent class methods
+    const req = context.switchToHttp().getRequest<CustomRequest>();
+    const res = context.switchToHttp().getResponse<Response>();
 
     // Extract timeToExpire in ms and convert to seconds
     const ttlSeconds = Math.ceil(throttlerLimitDetail.timeToExpire / 1000);
 
     // Add rate limit headers
-    response.header('Retry-After', String(ttlSeconds));
-    response.header(
+    res.header('Retry-After', String(ttlSeconds));
+    res.header(
       'X-RateLimit-Reset',
       String(Date.now() + throttlerLimitDetail.timeToExpire),
     );
 
     // Log rate limit violation
     console.warn(
-      `Rate limit exceeded for ${request.ip} on ${request.method} ${request.url}`,
+      `Rate limit exceeded for ${req.ip} on ${req.method} ${req.url}`,
     );
 
     throw new ThrottlerException();
