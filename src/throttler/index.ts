@@ -1,4 +1,4 @@
 export * from './throttler.module';
 export * from './throttler.guard';
 export * from './throttler.decorator';
-export * from './throttler-storage-redis.service'; 
+export * from './throttler-storage-redis.service';

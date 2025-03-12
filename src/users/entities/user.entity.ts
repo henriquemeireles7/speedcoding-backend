@@ -1,4 +1,4 @@
-import { SocialMediaLinkDto } from '../dto/update-user.dto';
+import { SocialMediaLink, UserPreferences } from '../value-objects';
 
 /**
  * User entity
@@ -17,10 +17,10 @@ export class User {
   displayName?: string | null;
   bio?: string | null;
   avatarUrl?: string | null;
-  preferences?: Record<string, any> | null;
+  preferences?: UserPreferences | null;
   location?: string | null;
   website?: string | null;
-  socialLinks?: SocialMediaLinkDto[] | null;
+  socialLinks?: SocialMediaLink[] | null;
   skills?: string[] | null;
   createdAt: Date;
   updatedAt: Date;
@@ -78,5 +78,90 @@ export class User {
       this.skills &&
       this.skills.length > 0
     );
+  }
+
+  /**
+   * Get user's theme preference
+   * @returns Theme preference or default
+   */
+  getTheme(): string {
+    return this.preferences?.theme || 'light';
+  }
+
+  /**
+   * Get user's notification preference
+   * @returns Notification preference or default
+   */
+  getNotificationsEnabled(): boolean {
+    return this.preferences?.notifications ?? true;
+  }
+
+  /**
+   * Add a social media link
+   * @param platform Social media platform
+   * @param url URL to the social media profile
+   */
+  addSocialLink(platform: string, url: string): void {
+    const newLink = SocialMediaLink.create(platform, url);
+
+    if (!this.socialLinks) {
+      this.socialLinks = [newLink];
+      return;
+    }
+
+    // Check if link for this platform already exists
+    const existingIndex = this.socialLinks.findIndex(
+      (link) => link.platform === newLink.platform,
+    );
+
+    if (existingIndex >= 0) {
+      // Replace existing link
+      this.socialLinks[existingIndex] = newLink;
+    } else {
+      // Add new link
+      this.socialLinks.push(newLink);
+    }
+  }
+
+  /**
+   * Remove a social media link
+   * @param platform Social media platform
+   * @returns True if removed, false if not found
+   */
+  removeSocialLink(platform: string): boolean {
+    if (!this.socialLinks) {
+      return false;
+    }
+
+    const initialLength = this.socialLinks.length;
+    this.socialLinks = this.socialLinks.filter(
+      (link) => link.platform !== platform,
+    );
+
+    return initialLength !== this.socialLinks.length;
+  }
+
+  /**
+   * Update user preferences
+   * @param preferencesData New preferences data
+   */
+  updatePreferences(preferencesData: Record<string, any>): void {
+    if (!this.preferences) {
+      this.preferences = UserPreferences.fromObject(preferencesData);
+    } else {
+      this.preferences = this.preferences.update({
+        additionalPreferences: preferencesData,
+      });
+    }
+  }
+
+  /**
+   * Set specific preference
+   * @param key Preference key
+   * @param value Preference value
+   */
+  setPreference(key: string, value: unknown): void {
+    const currentPrefs = this.preferences?.toObject() || {};
+    this.updatePreferences({ ...currentPrefs, [key]: value });
   }
 }

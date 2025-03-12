@@ -1,5 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { SocialMediaLinkDto } from '../../users/dto/update-user.dto';
+import {
+  SocialMediaLinkDto,
+  SocialMediaPlatform,
+} from '../../users/dto/update-user.dto';
 import { AuthUser } from '../entities/auth-user.entity';
 
 /**
@@ -48,6 +51,12 @@ export class AuthUserDto {
     example: 'https://example.com/avatars/johndoe.jpg',
   })
   avatarUrl?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'User preferences',
+    example: { theme: 'dark', notifications: true },
+  })
+  preferences?: Record<string, any> | null;
 
   @ApiPropertyOptional({
     description: 'User location',
@@ -105,7 +114,20 @@ export class AuthUserDto {
     dto.avatarUrl = authUser.avatarUrl as string | null;
     dto.location = authUser.location as string | null;
     dto.website = authUser.website as string | null;
-    dto.socialLinks = authUser.socialLinks as SocialMediaLinkDto[] | null;
+
+    // Convert preferences value object to plain object
+    dto.preferences = authUser.preferences
+      ? authUser.preferences.toObject()
+      : null;
+
+    // Convert social links value objects to DTOs
+    dto.socialLinks = authUser.socialLinks
+      ? authUser.socialLinks.map((link) => ({
+          platform: link.platform as SocialMediaPlatform,
+          url: link.url,
+        }))
+      : null;
+
     dto.skills = authUser.skills as string[] | null;
     dto.createdAt = authUser.createdAt;
     dto.updatedAt = authUser.updatedAt;

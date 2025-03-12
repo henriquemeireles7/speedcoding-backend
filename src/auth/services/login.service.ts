@@ -44,7 +44,7 @@ export class LoginService {
     }
 
     // Generate tokens
-    return this.generateAndStoreTokens(user);
+    return this.generateAndStoreTokens(user as AuthUser);
   }
 
   /**
@@ -68,7 +68,7 @@ export class LoginService {
     await this.tokenService.revokeRefreshToken(refreshToken);
 
     // Generate new tokens
-    return this.generateAndStoreTokens(user);
+    return this.generateAndStoreTokens(user as AuthUser);
   }
 
   /**

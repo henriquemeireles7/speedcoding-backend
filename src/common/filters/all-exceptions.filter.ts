@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { SentryExceptionCaptured } from '@sentry/nestjs';
 
 // Add an interface for error responses
 interface ErrorResponse {
@@ -30,6 +31,8 @@ interface FormattedResponse {
  */
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
+  @SentryExceptionCaptured()
+  catch (exception, host): void {
   private readonly logger = new Logger(AllExceptionsFilter.name);
 
   catch(exception: unknown, host: ArgumentsHost) {

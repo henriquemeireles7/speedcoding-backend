@@ -2,7 +2,8 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as Sentry from '@sentry/node';
 import { RewriteFrames } from '@sentry/integrations';
-import { Scope, Span, Transaction } from '@sentry/types';
+import { Scope } from '@sentry/node';
+import { Span, Transaction } from '@sentry/tracing';
 
 /**
  * Service for Sentry error tracking and performance monitoring
@@ -64,20 +65,14 @@ export class SentryService implements OnModuleInit {
   /**
    * Capture an exception with optional extra context
    */
-  captureException(
-    exception: Error,
-    captureContext?: ((scope: Scope) => Scope) | Record<string, any>,
-  ): string {
+  captureException(exception: Error, captureContext?: any): string {
     return Sentry.captureException(exception, captureContext);
   }
 
   /**
    * Capture a message with optional extra context
    */
-  captureMessage(
-    message: string,
-    captureContext?: ((scope: Scope) => Scope) | Record<string, any>,
-  ): string {
+  captureMessage(message: string, captureContext?: any): string {
     return Sentry.captureMessage(message, captureContext);
   }
 
@@ -89,8 +84,13 @@ export class SentryService implements OnModuleInit {
     op: string;
     tags?: Record<string, string>;
     data?: Record<string, any>;
-  }): Transaction {
-    return Sentry.startTransaction(context);
+  }): any {
+    // Use Sentry hub to create transaction
+    return (
+      Sentry.startTransaction?.(context) ||
+      // Fallback methods if startTransaction is unavailable
+      Sentry.getCurrentHub?.().startTransaction?.(context)
+    );
   }
 
   /**
@@ -103,8 +103,8 @@ export class SentryService implements OnModuleInit {
       tags?: Record<string, string>;
       data?: Record<string, any>;
     },
-    parentSpan?: Span,
-  ): Span {
+    parentSpan?: any,
+  ): any {
     if (parentSpan) {
       return parentSpan.startChild(context);
     }
@@ -155,17 +155,30 @@ export class SentryService implements OnModuleInit {
   /**
    * Get the current active transaction
    */
-  getCurrentTransaction(): Transaction | undefined {
-    const scope = Sentry.getCurrentScope();
-    return scope?.getTransaction();
+  getCurrentTransaction(): any {
+    // Try accessing transaction through different methods available in Sentry
+    const scope = Sentry.getCurrentScope?.();
+    if (scope?.getTransaction) {
+      return scope.getTransaction();
+    }
+
+    const hub = Sentry.getCurrentHub?.();
+    return hub?.getScope?.()?.getTransaction?.();
   }
 
   /**
    * Get the current active span
    */
-  getCurrentSpan(): Span | undefined {
-    const scope = Sentry.getCurrentScope();
-    return scope?.getSpan();
+  getCurrentSpan(): any {
+    // First try to get the transaction
+    const transaction = this.getCurrentTransaction();
+    if (transaction) {
+      return transaction;
+    }
+
+    // Fallback if getSpan method exists
+    const scope = Sentry.getCurrentScope?.();
+    return scope?.getSpan?.();
   }
 
   /**
