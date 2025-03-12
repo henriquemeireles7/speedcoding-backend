@@ -1,57 +1,82 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { LoggingService } from './logging/logging.service';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 
 /**
  * Bootstrap the application
  */
 async function bootstrap() {
-  // Create the application
-  const app = await NestFactory.create(AppModule, {
-    bufferLogs: true,
+  // Create NestJS application instance
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
 
-  // Get configuration service
+  // Get config service
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT', 3000);
+  const environment = configService.get<string>('NODE_ENV', 'development');
+  const isProduction = environment === 'production';
 
-  // Set up custom logger
-  const logger = app.get(LoggingService);
-  logger.setContext('Bootstrap');
-  app.useLogger(logger);
+  // Create logger
+  const logger = new Logger('Bootstrap');
 
   // Set up global prefix
-  app.setGlobalPrefix('api');
+  const apiPrefix = configService.get<string>('API_PREFIX', 'api');
+  app.setGlobalPrefix(apiPrefix);
 
-  // Set up validation pipe
+  // Set up global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
-      transform: true,
-      whitelist: true,
-      forbidNonWhitelisted: true,
+      whitelist: true, // Strip properties not defined in DTOs
+      transform: true, // Transform payloads to DTO instances
+      forbidNonWhitelisted: true, // Throw error if non-whitelisted properties are present
+      transformOptions: {
+        enableImplicitConversion: true, // Convert primitives automatically
+      },
     }),
   );
 
   // Set up CORS
-  app.enableCors();
+  app.enableCors({
+    origin: configService.get<string>('CORS_ORIGIN', '*'),
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+  });
+
+  // Serve static files
+  app.useStaticAssets(join(__dirname, '..', 'public'), {
+    prefix: '/static',
+  });
 
   // Set up Swagger documentation
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('SpeedCoding API')
-    .setDescription('API for the SpeedCoding platform')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
+  if (!isProduction) {
+    const config = new DocumentBuilder()
+      .setTitle('SpeedCode API')
+      .setDescription('SpeedCode backend API documentation')
+      .setVersion('1.0')
+      .addTag('speedcode')
+      .addBearerAuth()
+      .build();
 
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api/docs', app, document);
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/docs', app, document);
 
-  // Start the application
+    logger.log('Swagger documentation available at /api/docs');
+  }
+
+  // Start server
   await app.listen(port);
-  logger.log(`Application is running on: http://localhost:${port}/api`);
+  logger.log(`Application is running on port ${port} in ${environment} mode`);
 }
 
-bootstrap();
+// Start the application
+bootstrap().catch((err: Error) => {
+  // Log any bootstrap errors
+  const logger = new Logger('Bootstrap');
+  logger.error(`Failed to start application: ${err.message}`, err.stack);
+  process.exit(1);
+});

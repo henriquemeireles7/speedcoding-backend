@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Inject } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -7,7 +7,10 @@ import {
   PrismaHealthIndicator,
   HealthCheckResult,
   HealthIndicatorResult,
+  DiskHealthIndicator,
+  MemoryHealthIndicator,
 } from '@nestjs/terminus';
+import { Registry } from 'prom-client';
 
 /**
  * Health check controller for monitoring application status
@@ -20,6 +23,10 @@ export class HealthController {
     private health: HealthCheckService,
     private prismaHealth: PrismaHealthIndicator,
     private prisma: PrismaService,
+    private diskHealth: DiskHealthIndicator,
+    private memoryHealth: MemoryHealthIndicator,
+    @Inject('PROM_METRIC_PROM_CLIENT_DEFAULT_REGISTRY')
+    private readonly registry: Registry,
   ) {}
 
   /**
@@ -45,6 +52,24 @@ export class HealthController {
                 status: { type: 'string', example: 'up' },
               },
             },
+            disk: {
+              type: 'object',
+              properties: {
+                status: { type: 'string', example: 'up' },
+              },
+            },
+            memory: {
+              type: 'object',
+              properties: {
+                status: { type: 'string', example: 'up' },
+              },
+            },
+            prometheus: {
+              type: 'object',
+              properties: {
+                status: { type: 'string', example: 'up' },
+              },
+            },
           },
         },
       },
@@ -59,6 +84,28 @@ export class HealthController {
           'database',
           this.prisma,
         ) as Promise<HealthIndicatorResult>,
+
+      // Check disk usage
+      async () =>
+        this.diskHealth.checkStorage('disk', {
+          path: '/',
+          threshold: 0.9, // 90% threshold
+        }),
+
+      // Check memory usage
+      async () => this.memoryHealth.checkHeap('memory', 0.9), // 90% threshold
+
+      // Check Prometheus metrics
+      async () => {
+        // If registry exists, Prometheus is working
+        const isHealthy = !!this.registry;
+
+        return Promise.resolve({
+          prometheus: {
+            status: isHealthy ? 'up' : 'down',
+          },
+        });
+      },
     ]);
   }
 }

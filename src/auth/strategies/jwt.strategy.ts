@@ -1,46 +1,66 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { PrismaService } from '../../prisma/prisma.service';
-
-/**
- * JWT payload interface
- */
-interface JwtPayload {
-  sub: string; // User ID (UUID)
-  username: string;
-  email: string;
-}
+import { ConfigService } from '@nestjs/config';
+import { JwtPayload } from '../types/jwt-payload';
+import { UserRepository } from '../repositories/user.repository';
 
 /**
  * JWT Strategy for authentication
- * Validates JWT tokens and extracts user information
+ * Handles JWT token validation and extraction from Authorization header
  */
 @Injectable()
-export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(private prisma: PrismaService) {
+export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
+  constructor(
+    private configService: ConfigService,
+    private userRepository: UserRepository,
+  ) {
+    const secret = configService.get<string>('JWT_SECRET');
+
+    // Validate JWT_SECRET is defined
+    if (!secret) {
+      throw new Error('JWT_SECRET environment variable is not defined');
+    }
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_SECRET || 'supersecret', // Use environment variable or default
+      secretOrKey: secret,
     });
   }
 
   /**
-   * Validate the JWT payload and return the user
-   * @param payload JWT payload containing user information
-   * @returns User object if valid
+   * Validate JWT payload and return user data
+   * This method is called by Passport after JWT token is verified
+   * @param payload JWT payload
+   * @returns User data for request.user
    */
-  async validate(payload: JwtPayload) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
-      select: { id: true, username: true, email: true }, // Include email
-    });
+  async validate(payload: JwtPayload): Promise<JwtPayload> {
+    try {
+      // Validate payload has required fields
+      if (!payload || !payload.sub) {
+        throw new UnauthorizedException('Invalid token payload');
+      }
 
-    if (!user) {
-      throw new UnauthorizedException('User not found');
+      // Check if user exists in database
+      const user = await this.userRepository.findById(payload.sub);
+
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      // Return the payload to attach to the request object
+      return {
+        sub: payload.sub,
+        username: payload.username,
+        email: payload.email,
+      };
+    } catch (error) {
+      // Better error handling
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      throw new UnauthorizedException('Invalid token');
     }
-
-    return user;
   }
 }

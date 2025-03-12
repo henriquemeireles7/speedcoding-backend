@@ -4,7 +4,9 @@ import {
   ExecutionContext,
   UnauthorizedException,
 } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { UserRepository } from '../repositories/user.repository';
+import { Request } from 'express';
+import { JwtPayload } from '../types/jwt-payload';
 
 /**
  * Guard to check if user's email is verified
@@ -12,11 +14,11 @@ import { PrismaService } from '../../prisma/prisma.service';
  */
 @Injectable()
 export class EmailVerifiedGuard implements CanActivate {
-  constructor(private prisma: PrismaService) {}
+  constructor(private userRepository: UserRepository) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
-    const user = request.user;
+    const request = context.switchToHttp().getRequest<Request>();
+    const user = request.user as JwtPayload | undefined;
 
     // If no user is authenticated, this should be handled by the JWT guard
     if (!user) {
@@ -24,10 +26,7 @@ export class EmailVerifiedGuard implements CanActivate {
     }
 
     // Get the user from the database to check email verification status
-    const dbUser = await this.prisma.user.findUnique({
-      where: { id: user.sub },
-      select: { isEmailVerified: true },
-    });
+    const dbUser = await this.userRepository.findById(user.sub);
 
     if (!dbUser) {
       throw new UnauthorizedException('User not found');

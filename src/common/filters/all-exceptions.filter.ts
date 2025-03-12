@@ -7,22 +7,9 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-
-// Add an interface for error responses
-interface ErrorResponse {
-  message?: string;
-  error?: string;
-  [key: string]: any;
-}
-
-// Add an interface for formatted responses
-interface FormattedResponse {
-  statusCode: number;
-  timestamp: string;
-  path: string;
-  method: string;
-  error: unknown;
-}
+import { SentryExceptionCaptured } from '@sentry/nestjs';
+import { ErrorResponse } from '../types/error-response';
+import { FormattedResponse } from '../types/formatted-response';
 
 /**
  * Global exception filter
@@ -32,7 +19,8 @@ interface FormattedResponse {
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
 
-  catch(exception: unknown, host: ArgumentsHost) {
+  @SentryExceptionCaptured()
+  catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();

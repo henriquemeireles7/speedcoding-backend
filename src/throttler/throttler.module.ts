@@ -20,8 +20,12 @@ import { RedisModule, RedisService } from '../redis';
         const isProduction = config.get('NODE_ENV') === 'production';
 
         return {
-          ttl: 60, // Time window in seconds
-          limit: 60, // Number of requests allowed in the time window
+          throttlers: [
+            {
+              ttl: 60, // Time window in seconds
+              limit: 60, // Number of requests allowed in the time window
+            },
+          ],
           storage:
             isProduction && redisService.isClientAvailable()
               ? new ThrottlerStorageRedisService(redisService)

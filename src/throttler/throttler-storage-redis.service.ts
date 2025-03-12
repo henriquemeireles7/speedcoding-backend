@@ -3,6 +3,16 @@ import { ThrottlerStorage } from '@nestjs/throttler';
 import { RedisService } from '../redis/redis.service';
 
 /**
+ * Interface matching the ThrottlerStorageRecord from @nestjs/throttler
+ */
+interface ThrottlerStorageRecord {
+  totalHits: number;
+  timeToExpire: number;
+  isBlocked: boolean;
+  timeToBlockExpire: number;
+}
+
+/**
  * Redis storage service for throttler
  * Implements ThrottlerStorage interface for Redis
  */
@@ -16,16 +26,43 @@ export class ThrottlerStorageRedisService implements ThrottlerStorage {
    * Increment a throttle record
    * @param key Record key
    * @param ttl Time to live in seconds
-   * @returns Current count
+   * @param limit Maximum number of requests allowed
+   * @param blockDuration Duration to block if limit is exceeded
+   * @returns ThrottlerStorageRecord with hit count and expiration info
    */
-  async increment(key: string, ttl: number): Promise<number> {
+  async increment(
+    key: string,
+    ttl: number,
+    limit: number,
+    blockDuration: number,
+  ): Promise<ThrottlerStorageRecord> {
     try {
       const client = this.redisService.getClient();
       if (!client) {
         this.logger.warn('Redis client not available, using in-memory storage');
-        return 1; // Fallback to in-memory storage
+        return {
+          totalHits: 1,
+          timeToExpire: ttl * 1000,
+          isBlocked: false,
+          timeToBlockExpire: 0,
+        };
       }
 
+      // Check if the key is blocked
+      const blockedKey = `${key}:blocked`;
+      const isBlocked = await client.exists(blockedKey);
+
+      if (isBlocked) {
+        const blockTtl = await client.ttl(blockedKey);
+        return {
+          totalHits: limit + 1,
+          timeToExpire: 0,
+          isBlocked: true,
+          timeToBlockExpire: blockTtl > 0 ? blockTtl * 1000 : 0,
+        };
+      }
+
+      // Increment the counter
       const count = await client.incr(key);
 
       // Set expiration on first increment
@@ -33,37 +70,45 @@ export class ThrottlerStorageRedisService implements ThrottlerStorage {
         await client.expire(key, ttl);
       }
 
-      return count;
-    } catch (error) {
-      this.logger.error(
-        `Error incrementing throttle record: ${error.message}`,
-        error.stack,
-      );
-      return 1; // Fallback to in-memory storage
-    }
-  }
+      // Get TTL for the key
+      const remainingTtl = await client.ttl(key);
+      const timeToExpire = remainingTtl > 0 ? remainingTtl * 1000 : ttl * 1000;
 
-  /**
-   * Get the current count for a throttle record
-   * @param key Record key
-   * @returns Current count
-   */
-  async get(key: string): Promise<number> {
-    try {
-      const client = this.redisService.getClient();
-      if (!client) {
-        this.logger.warn('Redis client not available, using in-memory storage');
-        return 0;
+      // Check if limit is exceeded and block if necessary
+      if (count > limit && blockDuration > 0) {
+        await client.set(blockedKey, '1');
+        await client.expire(blockedKey, blockDuration);
+
+        return {
+          totalHits: count,
+          timeToExpire,
+          isBlocked: true,
+          timeToBlockExpire: blockDuration * 1000,
+        };
       }
 
-      const value = await client.get(key);
-      return value ? parseInt(value, 10) : 0;
-    } catch (error) {
+      return {
+        totalHits: count,
+        timeToExpire,
+        isBlocked: false,
+        timeToBlockExpire: 0,
+      };
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : '';
+
       this.logger.error(
-        `Error getting throttle record: ${error.message}`,
-        error.stack,
+        `Error incrementing throttle record: ${errorMessage}`,
+        errorStack,
       );
-      return 0;
+
+      return {
+        totalHits: 1,
+        timeToExpire: ttl * 1000,
+        isBlocked: false,
+        timeToBlockExpire: 0,
+      };
     }
   }
 }

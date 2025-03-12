@@ -3,6 +3,7 @@ import { CacheModule as NestCacheModule } from '@nestjs/cache-manager';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { redisStore } from 'cache-manager-redis-store';
 import { CacheService } from './cache.service';
+import { CacheInterceptor } from './cache.interceptor';
 import { RedisModule, RedisService } from '../redis';
 
 /**
@@ -47,7 +48,7 @@ import { RedisModule, RedisService } from '../redis';
       isGlobal: true,
     }),
   ],
-  providers: [CacheService],
-  exports: [CacheService],
+  providers: [CacheService, CacheInterceptor],
+  exports: [CacheService, CacheInterceptor],
 })
 export class CacheModule {}
