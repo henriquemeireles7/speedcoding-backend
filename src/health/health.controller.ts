@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Inject } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -10,7 +10,6 @@ import {
   DiskHealthIndicator,
   MemoryHealthIndicator,
 } from '@nestjs/terminus';
-import { InjectMetric } from '@willsoto/nestjs-prometheus';
 import { Registry } from 'prom-client';
 
 /**
@@ -26,7 +25,7 @@ export class HealthController {
     private prisma: PrismaService,
     private diskHealth: DiskHealthIndicator,
     private memoryHealth: MemoryHealthIndicator,
-    @InjectMetric('prom_client_default_registry')
+    @Inject('PROM_METRIC_PROM_CLIENT_DEFAULT_REGISTRY')
     private readonly registry: Registry,
   ) {}
 
